@@ -1,4 +1,5 @@
-import { command, flag, rest, summary, positional } from 'paparam'
+import paparam from 'paparam'
+import './bootstrap-process.mjs'
 import { persistent } from 'bare-storage'
 import process from 'bare-process'
 import os from 'bare-os'
@@ -6,8 +7,17 @@ import { isWindows } from 'which-runtime'
 import path from 'bare-path'
 import FileLog from 'bare-file-logger'
 import Console from 'bare-console'
-import pkg from './package.json' with { type: 'json' }
+import pkg from './package.json'
 import App from './app.js'
+import {
+  routeBalance,
+  routeForecast,
+  routeIngest,
+  routePay,
+  routeTools
+} from './cli/routes.mjs'
+
+const { command, flag, summary, arg } = paparam
 
 const ACCENT = '\x1b[38;2;196;245;60m'
 const RESET = '\x1b[0m'
@@ -20,12 +30,12 @@ function banner() {
   console.log(`${ACCENT}🍐 PearLedger${RESET} ${DIM}— Local-first · Gasless · P2P${RESET}\n`)
 }
 
-// ─── Subcomandos ─────────────────────────────────────────────
+const style = { accent: ACCENT, dim: DIM, reset: RESET }
 
 const ingestCmd = command(
   'ingest',
   summary('Ingesta y concilia una factura PDF (OCR local + 3-Way Match)'),
-  positional('<file>', 'Ruta al PDF de la factura')
+  arg('<file>', 'Ruta al PDF de la factura')
 )
 
 const forecastCmd = command(
@@ -40,7 +50,7 @@ const payCmd = command(
   flag('--vendor <address>', 'Dirección del proveedor (0x...)'),
   flag('--amount <usdt>', 'Monto en USDt'),
   flag('--usdt', 'Usar USDt como token de pago'),
-  flag('--dry-run', 'Simular sin ejecutar (default WDK)')
+  flag('--dry-run [value]', 'Simular sin ejecutar (default). Usar --dry-run=false para ejecutar')
 )
 
 const balanceCmd = command(
@@ -48,12 +58,16 @@ const balanceCmd = command(
   summary('Consulta saldo de wallet WDK')
 )
 
-// ─── CLI raíz ────────────────────────────────────────────────
+const toolsCmd = command(
+  'tools',
+  summary('Lista tools registradas en el harness')
+)
 
 const cmd = command(
   appName,
   summary(pkg.description),
   flag('--version|-v', 'Imprimir versión'),
+  flag('--json', 'Salida JSON (para UI / IPC)'),
   flag('--storage <dir>', 'Directorio de almacenamiento personalizado'),
   flag('--no-updates', 'Desactivar OTA para esta ejecución'),
   flag('--update-window <ms>', 'Ventana de espera del updater (ms); usar 0 en demos'),
@@ -61,34 +75,39 @@ const cmd = command(
   ingestCmd,
   forecastCmd,
   payCmd,
-  balanceCmd
+  balanceCmd,
+  toolsCmd
 )
 
-cmd.parse(Bare.argv.slice(isDev ? 2 : 1))
-if (cmd.flags.help) Bare.exit()
-if (cmd.flags.version) {
+const leaf = cmd.parse(Bare.argv.slice(isDev ? 2 : 1))
+if (!leaf) Bare.exit(1)
+if (leaf.flags.help) Bare.exit()
+if (leaf.flags.version || cmd.flags.version) {
   console.log(`${appName} v${pkg.version}`)
   Bare.exit()
 }
 
+const json = cmd.flags.json === true || leaf.flags.json === true
 const updates = cmd.flags.updates
-const storage = cmd.flags.storage || (isDev ? null : path.join(persistent(), appName))
+const storage = cmd.flags.storage || leaf.flags.storage || (isDev ? null : path.join(persistent(), appName))
 const dir = storage || path.join(os.tmpdir(), 'pear', appName)
 let wait
 try {
-  wait = updateWindow(cmd.flags.updateWindow)
+  wait = updateWindow(cmd.flags.updateWindow ?? leaf.flags.updateWindow)
 } catch (err) {
   console.error('[app:error]', err.message)
   Bare.exit(1)
 }
 
-if (cmd.flags.updater) {
+if (leaf.flags.updater || cmd.flags.updater) {
   await runUpdater(dir, wait)
   Bare.exit()
 }
 
-banner()
-console.log(`Updates: ${updates === false ? 'disabled' : 'enabled'}`)
+if (!json) {
+  banner()
+  console.log(`Updates: ${updates === false ? 'disabled' : 'enabled'}`)
+}
 
 if (updates !== false) {
   try {
@@ -99,64 +118,40 @@ if (updates !== false) {
   }
 }
 
-// ─── Routing de subcomandos ──────────────────────────────────
+const sub = leaf.name !== appName ? leaf.name : undefined
+const routeOpts = { json, ...style }
 
-const sub = cmd.args.subcommand
-
-if (sub === 'ingest') {
-  const file = cmd.args.ingest?.[0]
-  if (!file) {
-    console.error('Uso: pearledger ingest <file.pdf>')
-    Bare.exit(1)
+try {
+  if (sub === 'ingest') {
+    const file = leaf.args.file ?? leaf.positionals[0]
+    if (!file) {
+      console.error('Uso: pearledger ingest <file.pdf>')
+      Bare.exit(1)
+    }
+    await routeIngest(file, routeOpts)
+  } else if (sub === 'forecast') {
+    await routeForecast(leaf.flags.sku, routeOpts)
+  } else if (sub === 'pay') {
+    let dryRunVal = leaf.flags.dryRun
+    if (dryRunVal === 'false' || dryRunVal === false) dryRunVal = false
+    else if (dryRunVal === 'true' || dryRunVal === true) dryRunVal = true
+    else if (dryRunVal === undefined) dryRunVal = true
+    await routePay({ ...leaf.flags, dryRun: dryRunVal, dryRunFlag: dryRunVal }, routeOpts)
+  } else if (sub === 'balance') {
+    await routeBalance(routeOpts)
+  } else if (sub === 'tools') {
+    await routeTools(routeOpts)
+  } else if (!json) {
+    console.log('Comandos disponibles:')
+    console.log('  ingest <file.pdf>   — OCR + conciliación de factura')
+    console.log('  forecast [--sku]    — Proyección de inventario')
+    console.log('  pay --vendor --amount  — Pago gasless')
+    console.log('  balance             — Saldo de wallet')
+    console.log('  tools               — Tools del harness')
   }
-  await routeIngest(file)
-} else if (sub === 'forecast') {
-  await routeForecast(cmd.args.forecast?.sku)
-} else if (sub === 'pay') {
-  await routePay(cmd.args.pay)
-} else if (sub === 'balance') {
-  await routeBalance()
-} else {
-  console.log('Comandos disponibles:')
-  console.log('  ingest <file.pdf>   — OCR + conciliación de factura')
-  console.log('  forecast [--sku]    — Proyección de inventario')
-  console.log('  pay --vendor --amount --usdt  — Pago gasless')
-  console.log('  balance             — Saldo de wallet')
-}
-
-async function routeIngest(file) {
-  console.log(`${ACCENT}▸${RESET} Ingesta: ${file}`)
-  console.log(`${DIM}  → plugin-invoice-ops: qvac.ocr() + ragSearch()${RESET}`)
-  // TODO: importar harness y ejecutar plugin-invoice-ops
-  console.log(`${ACCENT}✓${RESET} Stub listo — implementar en workspace/plugins/plugin-invoice-ops/`)
-}
-
-async function routeForecast(sku) {
-  console.log(`${ACCENT}▸${RESET} Forecast${sku ? `: ${sku}` : ' (todos los SKUs)'}`)
-  console.log(`${DIM}  → plugin-procurement-forecast${RESET}`)
-  console.log(`${ACCENT}✓${RESET} Stub listo — implementar en workspace/plugins/plugin-procurement-forecast/`)
-}
-
-async function routePay(flags) {
-  const { vendor, amount, dryRun } = flags || {}
-  if (!vendor || !amount) {
-    console.error('Uso: pearledger pay --vendor 0x.. --amount 250 --usdt')
-    Bare.exit(1)
-  }
-  console.log(`${ACCENT}▸${RESET} Pago gasless: ${amount} USDt → ${vendor}`)
-  if (dryRun !== false) {
-    console.log(`${DIM}  Modo dry-run (WDK default). Usar --dry-run=false para ejecutar.${RESET}`)
-  }
-  const threshold = Number(process.env.HUMAN_CONFIRM_THRESHOLD_USDT || 1000)
-  if (Number(amount) > threshold) {
-    console.log(`${ACCENT}⚠${RESET} Monto > $${threshold} — requiere confirmación humana`)
-  }
-  console.log(`${DIM}  → plugin-wdk-settlement: execute_gasless_payment${RESET}`)
-}
-
-async function routeBalance() {
-  console.log(`${ACCENT}▸${RESET} Consultando saldo WDK...`)
-  console.log(`${DIM}  → plugin-wdk-settlement: get_wallet_balance${RESET}`)
+} catch (err) {
+  console.error('[pearledger]', err.message)
+  Bare.exit(1)
 }
 
 async function runUpdater(dir, wait) {

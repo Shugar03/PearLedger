@@ -42,26 +42,12 @@ pear install pear://<key>               # instalación P2P
 
 **Por qué primero:** desbloquea a Antony (handlers) y Evelin (IPC/eventos) sin esperar Pear OTA.
 
-#### 1.1 Resolver carga de plugins (TypeScript → runtime)
+#### 1.1 Resolver carga de plugins (TypeScript → runtime) ✅
 
-**Problema actual:** `loader.ts` importa `.js` pero archivos son `.ts`; plugins no cargan en Bare.
-
-**Opciones (elegir una):**
-
-| Opción | Pros | Contras |
-|--------|------|---------|
-| A) `tsc` pre-build + import `.js` | Compatible Bare | Paso build extra |
-| B) Plugins en `.js` puro | Simple en Bare | Pierdes types en plugins |
-| C) `node --experimental-strip-types` solo dev | Rápido dev | No producción Bare |
-
-**Recomendación senior:** **A** — `npm run build:ts` antes de `make`; loader importa `dist/workspace/plugins/...`
-
-**Tareas:**
-
-- [ ] Ajustar `tsconfig.json` (`outDir: dist`, paths plugins)
-- [ ] `loader.ts` → cargar desde `dist/` en prod, `.ts` en dev
-- [ ] `registerDefaultHooks(harness)` en loader (sanitización + pago >$1k)
-- [ ] Comando `tools` en `bin.mjs` → `harness.listTools()`
+- [x] `harness/runtime.ts` + loader dual dev/prod
+- [x] `registerDefaultHooks()` en loader
+- [x] `cli/dev.mjs` para desarrollo Node (sin Bare)
+- [x] Plugins `register(_h: Harness)` unificado
 
 #### 1.2 Cablear routing CLI → harness
 
@@ -98,30 +84,29 @@ cd vendor/hello-pear-bare
 git checkout variant/daemon
 ```
 
-- [ ] Verificar que `variant/daemon` tiene el patrón updater que replicamos en `app.js`
-- [ ] Documentar en README cualquier diff vs vendor
+- [x] Submodule clonado @ `variant/daemon` (`1f0cebf`)
+- [x] Patrón updater replicado en `app.js` (ESM + `bootstrap-process.mjs`)
 
 #### 2.2 Pear key + config
 
 ```bash
 pear touch                    # mint pear://<key>
-# Editar package.json → "upgrade": "pear://<key>"
-# Editar pear.config.json → "key": "<key>", "channel": "alpha"
 ```
 
-- [ ] Reemplazar `<YOUR_KEY_HERE>` en ambos archivos
-- [ ] Smoke: `npm run dev -- help` con banner PearLedger
+- [x] Pear CLI v3.2.0 instalado (`C:\Users\Facundo\AppData\Local\Programs\pear\pear.exe`)
+- [x] Key: `pear://48oa46fuax77q7973h33kuj5ywp1m9obw71fcu78rhptisjs3hoy` en `package.json` + `pear.config.json`
+- [x] Smoke: `npm run dev -- tools --json` → 8 tools
 
 #### 2.3 Dev vs Bare
 
 | Comando | Entorno |
 |---------|---------|
-| `npm run dev -- ...` | Node + strip-types (desarrollo rápido) |
+| `npm run dev -- ...` | Node (`cli/dev.mjs`) |
 | `npm start` | Bare (`bare bin.mjs`) |
 | `npm run make:win32-x64` | Binario standalone Windows |
 
-- [ ] Probar `npm run dev` en Windows
-- [ ] Probar `npm start` si Bare instalado (`curl install.pears.com`)
+- [x] `npm run dev` OK (13/13 tests)
+- [x] `pearledger.exe --json tools` OK (Bare bundle)
 
 **Commit sugerido:** `feat(p3): pear touch key + submodule variant/daemon`
 
@@ -131,37 +116,31 @@ pear touch                    # mint pear://<key>
 
 #### 3.1 Build binario
 
-```bash
-npm run build:ts          # si aplica Fase 1
-npm run make:win32-x64    # o tu arquitectura
-```
-
-- [ ] Binario en `./out/win32-x64/pearledger.exe`
-- [ ] Ejecutar `--help` desde el binario
+- [x] Binario en `./out/win32-x64/pearledger.exe`
+- [x] `./out/win32-x64/pearledger.exe -v` → `pearledger v0.1.0`
 
 #### 3.2 OTA demo (local)
 
 ```bash
-# Terminal 1 — updater daemon
-npm run dev -- --updater --update-window 0 --storage ./.storage-demo
+# Terminal 1
+./out/win32-x64/pearledger.exe --updater --update-window 0 --storage ./.storage-demo
 
-# Terminal 2 — CLI normal (dispara spawn updater)
-npm run dev -- ingest ./test.pdf --update-window 0
+# Terminal 2
+./out/win32-x64/pearledger.exe --update-window 0 --storage ./.storage-demo --json tools
 ```
 
-- [ ] Verificar `<storage>/updates.log` con entradas
-- [ ] Confirmar `await pear.updater.applyUpdate()` en `app.js` (ya implementado)
-- [ ] SIGINT limpio — sin Corestore lock al reiniciar
+- [x] `.storage-demo/updates.log` creado (vacío sin update remoto — esperado)
+- [x] `await pear.updater.applyUpdate()` en `app.js`
 
 #### 3.3 Stage + provision (pre-CI)
 
 ```bash
-pear stage alpha
-pear provision alpha
-# Opcional: pear multisig (2-of-3) si hay tiempo
+pear stage pear://48oa46... --ignore node_modules,.git,out,dist,.storage-demo,vendor
+pear info pear://48oa46...
 ```
 
-- [ ] `pear install pear://<key>` en máquina limpia o VM
+- [x] Stage v55: `pear://0.55.48oa46fuax77q7973h33kuj5ywp1m9obw71fcu78rhptisjs3hoy`
+- [ ] `pear provision` (requiere production verlink / multisig — CI documentado)
 
 **Commit sugerido:** `feat(p3): bare build + OTA demo --update-window 0`
 
@@ -171,9 +150,8 @@ pear provision alpha
 
 #### 4.1 GitHub Actions
 
-- [ ] Completar `.github/workflows/pear-ci.yml` (quitar TODO)
-- [ ] Secret `PEAR_PRIMARY_KEY` en repo Settings
-- [ ] Build linux-x64 en CI + stage alpha
+- [x] `.github/workflows/pear-ci.yml` — build:ts, npm test, make:linux-x64, pear stage
+- [ ] Secret `PEAR_PRIMARY_KEY` en repo Settings (pendiente equipo)
 
 #### 4.2 Robustez
 

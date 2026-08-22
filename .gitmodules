@@ -1,4 +1,4 @@
-[submodule "hello-pear-bare"]
+[submodule "vendor/hello-pear-bare"]
 	path = vendor/hello-pear-bare
 	url = https://github.com/holepunchto/hello-pear-bare.git
 	branch = variant/daemon

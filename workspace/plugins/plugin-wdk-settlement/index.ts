@@ -4,11 +4,12 @@
  */
 
 import { registerTools } from '../../../harness/loader.js'
+import type { Harness } from '../../../harness/core.js'
 import { getWalletBalance, quotePayment, executeGaslessPayment } from './paymaster.js'
 
 export const name = 'plugin-wdk-settlement'
 
-export async function register() {
+export async function register(_h: Harness) {
   registerTools(
     [
       {

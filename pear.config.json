@@ -1,5 +1,5 @@
 {
   "channel": "alpha",
-  "key": "<YOUR_KEY_HERE>",
+  "key": "pear://48oa46fuax77q7973h33kuj5ywp1m9obw71fcu78rhptisjs3hoy",
   "description": "PearLedger — Agente local de tesorería P2P"
 }

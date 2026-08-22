@@ -1,9 +1,10 @@
 import { registerTools } from '../../../harness/loader.js'
+import type { Harness } from '../../../harness/core.js'
 import { runUsageForecast } from './algorithm.js'
 
 export const name = 'plugin-procurement-forecast'
 
-export async function register() {
+export async function register(_h: Harness) {
   registerTools(
     [
       {
