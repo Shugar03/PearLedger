@@ -21,7 +21,7 @@
 
 | Persona | Rol | Principios | Rama sugerida |
 |---------|-----|------------|---------------|
-| **Sebastian Villarreal Paz** | Infra Pear + Orquestador | P3, P4 | `feat/p3-pear-ota`, `feat/p4-harness` |
+| **Sebastian Villarreal Paz** | Infra Pear + Orquestador | P3, P4 | `feat/p3-p4-pear-harness` |
 | **Antony** | IA local + Pagos gasless | P1, P2 | `feat/qvac-invoice-ops`, `feat/wdk-settlement` |
 | **Evelin** | Frontend / UX operativo | UI (Electron) | `feat/ui-electron` |
 
@@ -252,8 +252,7 @@ Ver detalle en [`PLUGIN_CONTRACT.md`](./PLUGIN_CONTRACT.md) *(pendiente — owne
 
 ```
 main
-├── feat/p3-pear-ota          ← Sebastian
-├── feat/p4-harness-wire      ← Sebastian  (mergear antes que plugins)
+├── feat/p3-p4-pear-harness   ← Sebastian (P3 + P4 — rama activa)
 ├── feat/qvac-invoice-ops     ← Antony
 ├── feat/wdk-settlement       ← Antony
 └── feat/ui-electron          ← Evelin
