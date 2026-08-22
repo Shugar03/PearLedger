@@ -57,12 +57,22 @@ function report(rule: string, file: string, index: number, text: string): void {
  */
 const ENV_ALLOWLIST = new Set(['shared/paths.ts', 'dev.ts'])
 
-/** Elimina comentarios de bloque y de línea para no marcar la documentación. */
+/**
+ * Elimina comentarios de bloque y de línea para no marcar la documentación.
+ *
+ * El `\r` de un checkout CRLF es un terminador de línea para `.`, así que un
+ * `//.*$` no alcanza el final del string y deja el comentario intacto: la regla
+ * pasaba en el CI (Linux, LF) y fallaba en Windows sobre el mismo commit.
+ */
+function splitLines(source: string): string[] {
+  return source.split(/\r?\n/)
+}
+
 function stripComments(source: string): string[] {
   const withoutBlocks = source.replace(/\/\*[\s\S]*?\*\//g, (block) =>
     block.replace(/[^\n]/g, ' ')
   )
-  return withoutBlocks.split('\n').map((line) => line.replace(/\/\/.*$/, ''))
+  return splitLines(withoutBlocks).map((line) => line.replace(/\/\/.*/, ''))
 }
 
 const files = walk(srcDir)
@@ -70,7 +80,7 @@ const files = walk(srcDir)
 for (const file of files) {
   const rel = path.relative(srcDir, file).split(path.sep).join('/')
   const source = readFileSync(file, 'utf8')
-  const original = source.split('\n')
+  const original = splitLines(source)
   const stripped = stripComments(source)
 
   stripped.forEach((code, index) => {
