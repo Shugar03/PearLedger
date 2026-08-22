@@ -8,8 +8,10 @@ models/*.gguf
 models/*.onnx
 workspace/invoices/*
 !workspace/invoices/.gitkeep
+workspace/invoices/.ocr-cache/
 workspace/purchase-orders/*
 !workspace/purchase-orders/.gitkeep
+!workspace/purchase-orders/*.json
 .DS_Store
 *.lock
 updater.lock

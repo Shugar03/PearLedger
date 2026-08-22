@@ -10,7 +10,7 @@
  *  - GTE_LARGE_FP16 (~670 MB) — embeddings RAG
  */
 
-import { mkdir, symlink, access, unlink, readdir } from 'node:fs/promises'
+import { mkdir, symlink, access, unlink, readdir, copyFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -20,7 +20,7 @@ import {
   GTE_LARGE_FP16,
   QWEN3_1_7B_INST_Q4,
   OCR_3B_MULTIMODAL_Q4_0,
-  MMPROJ_OCR_3B_MULTIMODAL_F16
+  MMPROJ_OCR_3B_MULTIMODAL_Q8_0
 } from '@qvac/sdk'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -46,7 +46,7 @@ const MODELS = [
     src: OCR_3B_MULTIMODAL_Q4_0,
     config: {
       ctx_size: 4096,
-      projectionModelSrc: MMPROJ_OCR_3B_MULTIMODAL_F16
+      projectionModelSrc: MMPROJ_OCR_3B_MULTIMODAL_Q8_0
     }
   }
 ]
@@ -63,7 +63,8 @@ function formatProgress(progress) {
 }
 
 async function findInQvacCache(filenameHint) {
-  const cacheRoot = path.join(process.env.HOME || '', '.qvac', 'models')
+  const home = process.env.USERPROFILE || process.env.HOME || ''
+  const cacheRoot = path.join(home, '.qvac', 'models')
   const files = await readdir(cacheRoot)
   const match = files.find((f) => f.endsWith('.gguf') && f.includes(filenameHint))
   if (!match) return null
@@ -81,13 +82,22 @@ async function linkCachedModel(alias, modelSrc) {
 
   const hint = modelSrc.modelId?.replace(/\.gguf$/, '') ?? alias.replace(/\.bin$/, '')
   const cached = await findInQvacCache(hint)
-  if (cached) {
-    await symlink(cached, linkPath)
-    return cached
+  if (!cached) {
+    console.warn(`  ⚠ No se encontró cache para ${alias}; hint=${hint}`)
+    return null
   }
 
-  console.warn(`  ⚠ No se pudo crear symlink para ${alias}; hint=${hint}`)
-  return null
+  try {
+    await symlink(cached, linkPath)
+    return { path: cached, mode: 'symlink' }
+  } catch (err) {
+    // Windows sin Developer Mode / privilegio SeCreateSymbolicLinkPrivilege
+    if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+      await copyFile(cached, linkPath)
+      return { path: cached, mode: 'copy' }
+    }
+    throw err
+  }
 }
 
 await mkdir(modelsDir, { recursive: true })
@@ -109,7 +119,10 @@ for (const model of MODELS) {
 
   console.log(`\n  ✓ Cargado: ${modelId}`)
   const linked = await linkCachedModel(model.alias, model.src)
-  if (linked) console.log(`  ✓ Symlink: models/${model.alias} → ${linked}`)
+  if (linked) {
+    const via = linked.mode === 'copy' ? 'copia' : 'symlink'
+    console.log(`  ✓ models/${model.alias} ← ${linked.path} (${via})`)
+  }
 
   await unloadModel({ modelId, clearStorage: false })
 }

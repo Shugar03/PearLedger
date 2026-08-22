@@ -15,6 +15,11 @@ const WORKSPACE = 'purchase-orders'
 const PO_DIR = path.join(process.cwd(), 'workspace', 'purchase-orders')
 const MATCH_THRESHOLD = 0.55
 
+/** Similitud mínima de proveedor para siquiera proponer una PO. */
+const VENDOR_MIN_SIMILARITY = Number(process.env.PEARLEDGER_VENDOR_MIN_SIM || 0.34)
+/** Por encima de esto el proveedor se considera el mismo pese al ruido del OCR. */
+const VENDOR_MATCH_SIMILARITY = 0.75
+
 export interface PurchaseOrder {
   purchaseOrderId: string
   vendor: string
@@ -48,19 +53,78 @@ export interface MatchResult {
   discrepancies: MatchDiscrepancy[]
   status: string
   ragScore?: number
+  vendorSimilarity?: number
+  rejectedCandidate?: string
 }
 
 let poIndexReady = false
 const poById = new Map<string, PurchaseOrder>()
 
-function normalize(text: string): string {
-  return text
+function normalize(text: string | null | undefined): string {
+  return String(text ?? '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9.\s$-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Sufijos societarios y conectores que no aportan señal al comparar proveedores. */
+const VENDOR_STOPWORDS = new Set([
+  'sa',
+  'srl',
+  'sas',
+  'sl',
+  'inc',
+  'llc',
+  'ltd',
+  'ltda',
+  'co',
+  'corp',
+  'company',
+  'gmbh',
+  'bv',
+  'nv',
+  'plc',
+  'the',
+  'de',
+  'del',
+  'la',
+  'los',
+  'and',
+  'y'
+])
+
+function vendorTokens(value: string | null | undefined): string[] {
+  return normalize(value)
+    .split(' ')
+    .map((token) => token.replace(/[.$-]/g, ''))
+    .filter((token) => token.length > 1 && !VENDOR_STOPWORDS.has(token))
+}
+
+/** Coincidencia parcial: el OCR muta letras, así que un prefijo común ya cuenta. */
+function tokenAffinity(a: string, b: string): number {
+  if (a === b) return 1
+  if (a.length >= 4 && b.length >= 4) {
+    if (a.startsWith(b.slice(0, 4)) || b.startsWith(a.slice(0, 4))) return 0.6
+  }
+  return 0
+}
+
+export function vendorSimilarity(a: string | null | undefined, b: string | null | undefined): number {
+  const left = vendorTokens(a)
+  const right = vendorTokens(b)
+  if (!left.length || !right.length) return 0
+
+  let score = 0
+  for (const token of left) {
+    let best = 0
+    for (const other of right) best = Math.max(best, tokenAffinity(token, other))
+    score += best
+  }
+
+  return Math.min(1, (2 * score) / (left.length + right.length))
 }
 
 function poToDocument(po: PurchaseOrder): string {
@@ -159,12 +223,13 @@ function buildQuery(invoice?: Invoice, invoiceId?: string): string {
 function compareThreeWay(invoice: Invoice, po: PurchaseOrder): MatchDiscrepancy[] {
   const discrepancies: MatchDiscrepancy[] = []
 
-  if (normalize(invoice.vendor) !== normalize(po.vendor)) {
+  const vendorSim = vendorSimilarity(invoice.vendor, po.vendor)
+  if (vendorSim < VENDOR_MATCH_SIMILARITY) {
     discrepancies.push({
       field: 'vendor',
       invoice: invoice.vendor,
       purchaseOrder: po.vendor,
-      severity: 'error'
+      severity: vendorSim >= VENDOR_MIN_SIMILARITY ? 'warning' : 'error'
     })
   }
 
@@ -232,9 +297,13 @@ function confidenceFrom(ragScore: number, discrepancies: MatchDiscrepancy[]): nu
 
 export async function matchPurchaseOrder(params: {
   invoiceId?: string
-  invoice?: Invoice
+  invoice?: Invoice | { invoice?: Invoice }
 }): Promise<MatchResult> {
-  const invoiceId = params.invoiceId || params.invoice?.invoiceNumber || ''
+  const invoice =
+    params.invoice && 'invoice' in params.invoice && params.invoice.invoice
+      ? params.invoice.invoice
+      : (params.invoice as Invoice | undefined)
+  const invoiceId = params.invoiceId || invoice?.invoiceNumber || ''
 
   try {
     await ensurePurchaseOrderIndex()
@@ -242,12 +311,12 @@ export async function matchPurchaseOrder(params: {
     console.warn(
       `[matcher] Index RAG falló (${err instanceof Error ? err.message : err}) — fallback filesystem`
     )
-    return matchFromFilesystem(params, invoiceId)
+    return matchFromFilesystem({ invoiceId, invoice }, invoiceId)
   }
 
   try {
     const modelId = await getEmbeddingModelId()
-    const query = buildQuery(params.invoice, invoiceId)
+    const query = buildQuery(invoice, invoiceId)
 
     if (!query) {
       return {
@@ -260,33 +329,60 @@ export async function matchPurchaseOrder(params: {
       }
     }
 
-    const hits = (await ragSearch({
+    const searchResult = await ragSearch({
       modelId,
       workspace: WORKSPACE,
       query,
       topK: 3
-    })) ?? []
+    })
+    const hits = Array.isArray(searchResult)
+      ? searchResult
+      : Array.isArray((searchResult as { results?: unknown[] } | null)?.results)
+        ? ((searchResult as { results: unknown[] }).results)
+        : []
 
-    if (!Array.isArray(hits) || hits.length === 0) {
-      return matchFromFilesystem(params, invoiceId)
+    if (!hits.length) {
+      return matchFromFilesystem({ invoiceId, invoice }, invoiceId)
     }
 
-    const top = hits[0]
-    if (!top?.content) {
-      return matchFromFilesystem(params, invoiceId)
+    const candidates = (hits as Array<{ content?: string; score?: number }>)
+      .map((hit) => {
+        if (!hit?.content) return null
+        const po = parsePoFromRagContent(hit.content)
+        if (!po) return null
+        return {
+          po,
+          ragScore: Number(hit.score ?? 0),
+          vendorSim: invoice ? vendorSimilarity(invoice.vendor, po.vendor) : 1
+        }
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+
+    if (!candidates.length) {
+      return matchFromFilesystem({ invoiceId, invoice }, invoiceId)
     }
 
-    const po = parsePoFromRagContent(top.content)
-    const ragScore = Number(top.score ?? 0)
+    const chosen = candidates.find((entry) => entry.vendorSim >= VENDOR_MIN_SIMILARITY)
 
-    if (!po) {
-      return matchFromFilesystem(params, invoiceId)
+    if (!chosen) {
+      const closest = candidates.reduce((best, entry) =>
+        entry.vendorSim > best.vendorSim ? entry : best
+      )
+      return {
+        invoiceId,
+        matched: false,
+        purchaseOrderId: null,
+        confidence: 0,
+        discrepancies: [],
+        status: 'vendor_mismatch',
+        vendorSimilarity: Number(closest.vendorSim.toFixed(3)),
+        rejectedCandidate: closest.po.purchaseOrderId
+      }
     }
 
-    const discrepancies = params.invoice ? compareThreeWay(params.invoice, po) : []
-    const confidence = params.invoice
-      ? confidenceFrom(ragScore, discrepancies)
-      : ragScore
+    const { po, ragScore, vendorSim } = chosen
+    const discrepancies = invoice ? compareThreeWay(invoice, po) : []
+    const confidence = invoice ? confidenceFrom(ragScore, discrepancies) : ragScore
     const hasErrors = discrepancies.some((d) => d.severity === 'error')
     const matched = confidence >= MATCH_THRESHOLD && !hasErrors
 
@@ -297,13 +393,14 @@ export async function matchPurchaseOrder(params: {
       confidence: Number(confidence.toFixed(3)),
       discrepancies,
       ragScore: Number(ragScore.toFixed(3)),
+      vendorSimilarity: Number(vendorSim.toFixed(3)),
       status: matched ? 'matched' : hasErrors ? 'discrepancies_found' : 'low_confidence'
     }
   } catch (err) {
     console.warn(
       `[matcher] ragSearch falló (${err instanceof Error ? err.message : err}) — fallback filesystem`
     )
-    return matchFromFilesystem(params, invoiceId)
+    return matchFromFilesystem({ invoiceId, invoice }, invoiceId)
   }
 }
 
@@ -325,12 +422,26 @@ async function matchFromFilesystem(
 
   let best: PurchaseOrder | null = null
   let bestScore = 0
+  let bestVendorSim = 0
+  let closestVendorSim = 0
+  let closestVendorPo: PurchaseOrder | null = null
 
   for (const po of orders) {
     let score = 0
+    let vendorSim = 0
+
     if (params.invoice) {
-      if (normalize(params.invoice.vendor) === normalize(po.vendor)) score += 0.45
-      if (Math.abs(params.invoice.total - po.total) < 0.01) score += 0.35
+      vendorSim = vendorSimilarity(params.invoice.vendor, po.vendor)
+      if (vendorSim > closestVendorSim) {
+        closestVendorSim = vendorSim
+        closestVendorPo = po
+      }
+
+      const totalMatches = Math.abs(params.invoice.total - po.total) < 0.01
+      if (vendorSim < VENDOR_MIN_SIMILARITY && !totalMatches) continue
+
+      score += 0.45 * vendorSim
+      if (totalMatches) score += 0.35
       if (params.invoice.lineItems.length === po.lineItems.length) score += 0.1
       const invDesc = normalize(params.invoice.lineItems[0]?.description ?? '')
       const poDesc = normalize(po.lineItems[0]?.description ?? '')
@@ -340,8 +451,10 @@ async function matchFromFilesystem(
     } else if (invoiceId && po.purchaseOrderId.includes(invoiceId)) {
       score = 0.5
     }
+
     if (score > bestScore) {
       bestScore = score
+      bestVendorSim = vendorSim
       best = po
     }
   }
@@ -353,7 +466,13 @@ async function matchFromFilesystem(
       purchaseOrderId: null,
       confidence: 0,
       discrepancies: [],
-      status: 'no_po_candidates'
+      status: closestVendorPo ? 'vendor_mismatch' : 'no_po_candidates',
+      ...(closestVendorPo
+        ? {
+            vendorSimilarity: Number(closestVendorSim.toFixed(3)),
+            rejectedCandidate: closestVendorPo.purchaseOrderId
+          }
+        : {})
     }
   }
 
@@ -370,6 +489,7 @@ async function matchFromFilesystem(
     purchaseOrderId: best.purchaseOrderId,
     confidence: Number(confidence.toFixed(3)),
     discrepancies,
+    vendorSimilarity: Number(bestVendorSim.toFixed(3)),
     status: matched
       ? 'matched_filesystem'
       : hasErrors

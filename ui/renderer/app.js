@@ -66,7 +66,10 @@ $('#btn-ingest').addEventListener('click', async () => {
   if (parsed && !parsed.blocked) {
     const invoiceId =
       parsed.invoiceId ?? parsed.invoice?.invoiceNumber ?? parsed.invoiceNumber ?? 'unknown'
-    match = await runTool('match_purchase_order', { invoiceId, invoice: parsed })
+    match = await runTool('match_purchase_order', {
+      invoiceId,
+      invoice: parsed.invoice ?? parsed
+    })
   }
   renderJson($('#inbox-result'), { parsed, match })
 })
