@@ -95,9 +95,10 @@ pearledger CLI (bin.mjs)
 - **No combinar** structured output + tools en la misma llamada QVAC (HTTP 400)
 - **`dryRun:false` explícito** en WDK `send_token` — default es simulación
 - **`safeModulesVersion: '0.3.0'`** obligatorio en config WDK
-- **Sepolia usa MOCK USDt** (`0xd077a4...`) — no USDt real
+- **Sepolia usa MOCK USDt** (`0xd077A400968890Eacc75cdc901F0356c943e4fDb`) — no USDt real
 - **Pear `variant/daemon`** — NO usar `main` ni `variant/single-thread`
 - **OTA demo**: `--update-window 0` + `await pear.updater.applyUpdate()`
+- **Pay live Sepolia**: ver [`docs/WDK-SEPOLIA-LIVE-PAY.md`](./docs/WDK-SEPOLIA-LIVE-PAY.md) (`--dry-run=false`, faucet, `npm run test:p2-live`)
 
 ## Documentación externa
 
