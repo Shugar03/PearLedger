@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PearLedger · Dashboard</title>
+
+    <!--
+      El token de sesión se inyecta aquí al servir el HTML.
+      Va en un meta (no en cookie, no en query string): así el cliente lo lee
+      con JS y lo manda en la cabecera X-PearLedger-Token, y nunca viaja solo
+      en peticiones que el navegador emita por su cuenta.
+    -->
+    <meta name="pearledger-token" content="__PEARLEDGER_SESSION_TOKEN__" />
+
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8D%90%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">🍐</span> PearLedger</div>
+        <p class="badge-local">100% local · sin cloud</p>
+
+        <nav aria-label="Secciones">
+          <button type="button" class="nav active" data-view="inbox">
+            <span class="nav-icon">📄</span> Inbox
+          </button>
+          <button type="button" class="nav" data-view="pay">
+            <span class="nav-icon">💸</span> Pagos
+          </button>
+          <button type="button" class="nav" data-view="forecast">
+            <span class="nav-icon">📈</span> Forecast
+          </button>
+          <button type="button" class="nav" data-view="wallet">
+            <span class="nav-icon">👛</span> Wallet
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="meta-row"><span>Tools</span><b id="meta-tools">—</b></div>
+          <div class="meta-row"><span>Versión</span><b id="meta-version">—</b></div>
+          <div class="meta-row"><span>Modo</span><b class="tag-dry">dry-run</b></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="header">
+          <h1 id="view-title">Inbox de facturas</h1>
+          <div class="header-right">
+            <span id="stream-pill" class="pill dim"><i class="dot"></i> SSE</span>
+            <span id="status-pill" class="pill">Listo</span>
+          </div>
+        </header>
+
+        <!-- ── Inbox ─────────────────────────────────────────────────── -->
+        <section id="view-inbox" class="view active">
+          <div class="card">
+            <h2>Facturas</h2>
+            <p class="muted">
+              OCR local + conciliación 3-way contra las órdenes de compra, vía harness.
+            </p>
+
+            <div class="form-grid">
+              <label>
+                Ruta absoluta del archivo
+                <input id="inbox-path" placeholder="/ruta/al/repo/workspace/invoices/sample.png" />
+              </label>
+              <label>
+                Elegir archivo
+                <input id="inbox-file-input" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" />
+              </label>
+            </div>
+
+            <p class="note">
+              <b>Nota navegador:</b> el diálogo nativo de Electron
+              (<code>pear.pickInvoice()</code>) devuelve la ruta absoluta en disco; un
+              <code>&lt;input type="file"&gt;</code> del navegador
+              <em>no puede</em> por política de seguridad — sólo expone el nombre. Al elegir un
+              archivo se propone la ruta dentro de <code>workspace/invoices/</code>; ajustala si
+              vive en otro sitio. El harness lee del disco local, no se sube nada.
+            </p>
+
+            <div class="actions">
+              <button type="button" id="btn-ingest" class="btn primary">Procesar factura</button>
+              <button type="button" id="btn-sample" class="btn">Usar fixture demo</button>
+            </div>
+
+            <p id="inbox-file" class="file-path"></p>
+            <pre id="inbox-result" class="result"></pre>
+          </div>
+        </section>
+
+        <!-- ── Pagos ─────────────────────────────────────────────────── -->
+        <section id="view-pay" class="view">
+          <div class="card">
+            <h2>Cola de pagos</h2>
+            <p class="muted">
+              El dashboard cotiza y simula. La firma real vive en el CLI, que sí tiene canal
+              interactivo con un humano.
+            </p>
+
+            <form id="pay-form" class="form-grid two">
+              <label>
+                Proveedor (0x…)
+                <input id="pay-vendor" placeholder="0x742d35Cc6634C0532925a3b844Bc454e4438f44e" />
+              </label>
+              <label>
+                Monto USDt
+                <input id="pay-amount" type="number" min="0" step="0.01" value="250" />
+              </label>
+            </form>
+
+            <div class="actions">
+              <button type="button" id="btn-quote" class="btn">Cotizar</button>
+              <button type="button" id="btn-pay-dry" class="btn primary">Aprobar (dry-run)</button>
+            </div>
+
+            <p class="note">
+              <b>Controles del servidor:</b> <code>dryRun</code> se fuerza a <code>true</code> y
+              <code>confirmed</code> / <code>approvalId</code> se eliminan de cualquier petición
+              HTTP, ignorando lo que mande el cliente.
+            </p>
+
+            <pre id="pay-result" class="result"></pre>
+          </div>
+
+          <dialog id="confirm-modal" class="confirm-modal">
+            <form method="dialog" class="confirm-card">
+              <h2>Confirmación requerida</h2>
+              <p id="confirm-message" class="muted"></p>
+              <div class="actions">
+                <button type="submit" value="cancel" class="btn">Cancelar</button>
+                <button type="submit" value="confirm" class="btn primary">Continuar</button>
+              </div>
+            </form>
+          </dialog>
+        </section>
+
+        <!-- ── Forecast ──────────────────────────────────────────────── -->
+        <section id="view-forecast" class="view">
+          <div class="card">
+            <h2>Proyección de stock</h2>
+            <p class="muted">Consumo proyectado y fecha estimada de quiebre por SKU.</p>
+            <div class="form-grid two">
+              <label>
+                SKU (opcional)
+                <input id="forecast-sku" placeholder="SKU-001" />
+              </label>
+              <label>
+                Horizonte (días)
+                <input id="forecast-days" type="number" min="1" step="1" value="30" />
+              </label>
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-forecast" class="btn primary">Ejecutar forecast</button>
+              <button type="button" id="btn-inventory" class="btn">Ver inventario</button>
+            </div>
+            <pre id="forecast-result" class="result"></pre>
+          </div>
+        </section>
+
+        <!-- ── Wallet ────────────────────────────────────────────────── -->
+        <section id="view-wallet" class="view">
+          <div class="cards-row">
+            <div class="card kpi">
+              <h3>Saldo USDt</h3>
+              <p id="wallet-usdt" class="kpi-value">—</p>
+              <p class="muted">Fee gasless: $0.00</p>
+            </div>
+            <div class="card kpi">
+              <h3>Red</h3>
+              <p id="wallet-network" class="kpi-value">—</p>
+              <p class="muted">Selección por chainId</p>
+            </div>
+            <div class="card kpi">
+              <h3>Nativo</h3>
+              <p id="wallet-native" class="kpi-value">—</p>
+              <p class="muted">Sólo informativo</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="actions">
+              <button type="button" id="btn-balance" class="btn primary">Actualizar saldo</button>
+            </div>
+            <pre id="wallet-result" class="result"></pre>
+          </div>
+        </section>
+      </main>
+
+      <!-- ── Actividad en vivo ───────────────────────────────────────── -->
+      <aside class="activity">
+        <div class="activity-head">
+          <h2>Actividad en vivo</h2>
+          <button type="button" id="btn-clear-activity" class="btn tiny">Limpiar</button>
+        </div>
+        <p class="muted small">Eventos del harness por SSE, en tiempo real.</p>
+
+        <div class="counters">
+          <span class="counter" data-kind="tool:executing">▶ <b id="c-executing">0</b></span>
+          <span class="counter" data-kind="tool:done">✔ <b id="c-done">0</b></span>
+          <span class="counter" data-kind="tool:blocked">⛔ <b id="c-blocked">0</b></span>
+          <span class="counter" data-kind="tool:failed">✖ <b id="c-failed">0</b></span>
+        </div>
+
+        <ol id="activity-list" class="activity-list"></ol>
+        <p id="activity-empty" class="muted small">Sin eventos todavía. Ejecutá una tool.</p>
+      </aside>
+    </div>
+
+    <!-- pear-web.js DEBE cargar antes que app.js: define window.pear. -->
+    <script src="/pear-web.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

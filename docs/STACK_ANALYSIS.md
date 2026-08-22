@@ -76,7 +76,7 @@ Documento de referencia para el equipo de hackathon. Resume investigación de do
 
 **Qué es:** Orquestador ligero (~30 líneas) con event bus, registro de tools y hooks pre-acción. Cordis NO se importa porque asume Node.js, no Bare.
 
-**Implementación:** `harness/core.ts` + `harness/hooks.ts`
+**Implementación:** `src/core/harness.ts` + `src/core/hooks.ts`
 
 **Hooks de seguridad:**
 - Confirmación humana para pagos > $1,000 USDt

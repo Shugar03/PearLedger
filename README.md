@@ -23,15 +23,25 @@ npm run models:download
 
 # 4. Mintear pear:// key (requiere Pear CLI v3)
 pear touch
-# → Reemplazar pear://<YOUR_KEY_HERE> en package.json y pear.config.json
+# → Reemplazar el campo `upgrade` de package.json con la clave obtenida
 
-# 5. Desarrollo local
+# 5. Desarrollo local (Node)
 npm run dev -- ingest ./workspace/invoices/factura.pdf
 npm run dev -- forecast --sku ABC-123
-npm run dev -- pay --vendor 0x... --amount 250 --usdt
+npm run dev -- pay --vendor 0x... --amount 250
 npm run dev -- balance
+npm run dev -- tools --json
 
-# 6. Instalar vía P2P (post-build)
+# 6. Dashboard en vivo (dev server, http://127.0.0.1:7331)
+npm run dashboard
+
+# 7. Producción bajo Bare + binario standalone
+npm start                # bare dist/bin.js
+npm run make             # binario del host actual
+
+# 8. Publicar e instalar vía P2P
+npm run pear:build       # deployment/ con package.json + by-arch/<host>/app/
+pear stage <link> ../pearledger-deployment
 pear install pear://<key>
 ```
 
@@ -40,12 +50,28 @@ pear install pear://<key>
 Basado en [hello-pear-bare @ `variant/daemon`](https://github.com/holepunchto/hello-pear-bare/tree/variant/daemon) — short-lived CLI con updater daemon detached.
 
 ```
-pearledger CLI (bin.mjs)
-    ├── QVAC SDK      → OCR + LLM + RAG (100% local)
-    ├── WDK CLI/MCP   → Pagos gasless USDt
-    ├── Bare runtime  → Sin Node.js en producción
-    └── Pear variant/daemon → OTA P2P (pear://<key>)
+src/
+├── bin.ts          entrypoint Bare/Pear  →  dist/bin.js
+├── dev.ts          entrypoint Node       →  dist/dev.js
+├── core/      @core       harness: registro de tools, bus, pipeline de hooks
+├── config/    @config     único punto de lectura del entorno (validado con zod)
+├── shared/    @shared     logger (stderr), paths (sin cwd), metadatos
+├── plugins/   @plugins    invoice-ops · procurement-forecast · wdk-settlement
+├── cli/       @cli        comandos puros + un solo parser + presentación
+├── dashboard/ @dashboard  dev server node:http + SSE, y el renderer compartido
+├── ipc/       @ipc        fachada que consumen Electron y el dashboard
+├── pear/      @pear       ciclo de vida del runtime Pear y del updater OTA
+└── workers/   @workers    MCP server de WDK
+
+workspace/          SOLO datos del usuario (facturas, órdenes de compra, stock)
+dist/               salida del build — es lo que ejecutan Bare y Node
 ```
+
+Capas: QVAC SDK para OCR/LLM/RAG local · WDK para pagos gasless en USDt · Bare
+como runtime de producción (sin Node) · Pear `variant/daemon` para el OTA P2P.
+
+Las reglas de código son obligatorias y se verifican en CI: ver
+[`CONVENTIONS.md`](CONVENTIONS.md) y `npm run lint:rules`.
 
 ### Plugins (filosofía Cordis — sin dependencia)
 
@@ -59,13 +85,14 @@ pearledger CLI (bin.mjs)
 
 | Track | Archivo clave |
 |-------|---------------|
-| **QVAC OCR** | [`workspace/plugins/plugin-invoice-ops/ocr.ts`](workspace/plugins/plugin-invoice-ops/ocr.ts) |
-| **QVAC RAG** | [`workspace/plugins/plugin-invoice-ops/matcher.ts`](workspace/plugins/plugin-invoice-ops/matcher.ts) |
-| **WDK Paymaster** | [`workspace/plugins/plugin-wdk-settlement/paymaster.ts`](workspace/plugins/plugin-wdk-settlement/paymaster.ts) |
-| **WDK Hooks >$1k** | [`harness/hooks.ts`](harness/hooks.ts) |
-| **Pear daemon/OTA** | [`workers/updater.js`](workers/updater.js) |
-| **Pear CLI entry** | [`bin.mjs`](bin.mjs) |
-| **Harness core** | [`harness/core.ts`](harness/core.ts) |
+| **QVAC OCR** | [`src/plugins/invoice-ops/ocr.ts`](src/plugins/invoice-ops/ocr.ts) |
+| **QVAC RAG** | [`src/plugins/invoice-ops/matcher.ts`](src/plugins/invoice-ops/matcher.ts) |
+| **WDK Paymaster** | [`src/plugins/wdk-settlement/paymaster.ts`](src/plugins/wdk-settlement/paymaster.ts) |
+| **WDK Hooks >$1k** | [`src/core/hooks.ts`](src/core/hooks.ts) |
+| **Pear daemon/OTA** | [`src/pear/app.ts`](src/pear/app.ts) |
+| **Pear CLI entry** | [`src/bin.ts`](src/bin.ts) |
+| **Harness core** | [`src/core/harness.ts`](src/core/harness.ts) |
+| **Dashboard + dev server** | [`src/dashboard/server.ts`](src/dashboard/server.ts) |
 | **Pear CI** | [`.github/workflows/pear-ci.yml`](.github/workflows/pear-ci.yml) |
 
 ## Stack tecnológico y factibilidad

@@ -1,25 +1,30 @@
 node_modules/
-out/
 dist/
+out/
+deployment/
+pear-stage/
+
 .env
 *.log
+
+# Modelos QVAC (~5 GB) — se obtienen con `npm run models:download`
 models/*.bin
 models/*.gguf
 models/*.onnx
+
+# Datos del usuario: se versionan solo los fixtures de demo
 workspace/invoices/*
 !workspace/invoices/.gitkeep
 !workspace/invoices/sample.png
 !workspace/invoices/sample.pdf
-workspace/invoices/.ocr-cache/
 workspace/purchase-orders/*
 !workspace/purchase-orders/.gitkeep
 !workspace/purchase-orders/*.json
 !workspace/purchase-orders/*.txt
-.DS_Store
-*.lock
-updater.lock
+
 .storage-demo/
 .storage-pear-ci/
-pear-stage/
+updater.lock
 uploads/
 agent-tools/
+.DS_Store

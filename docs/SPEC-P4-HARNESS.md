@@ -29,7 +29,7 @@
 ## H-05 — Carga de plugins (integración)
 
 **Given** `npm run build:ts` completado  
-**When** se llama `loadPlugins()` desde `dist/harness/loader.js`  
+**When** se llama `loadPlugins()` desde `dist/core/loader.js`  
 **Then** se registran **8 tools** con nombres congelados (ver contrato)
 
 ## H-06 — Tools congeladas (contrato)
@@ -76,5 +76,5 @@
 
 ## P3-02 — OTA log path
 
-**Given** updater en `app.js`  
+**Given** updater en `src/pear/app.ts`  
 **Then** escribe en `<storage>/updates.log` vía `bare-file-logger`

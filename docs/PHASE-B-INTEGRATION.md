@@ -24,10 +24,10 @@ npm test
 
 | Archivo | Tool(s) |
 |---------|---------|
-| `workspace/plugins/plugin-invoice-ops/ocr.ts` | `parse_invoice` |
-| `workspace/plugins/plugin-invoice-ops/matcher.ts` | `match_purchase_order` |
-| `workspace/plugins/plugin-procurement-forecast/algorithm.ts` | `run_usage_forecast`, `check_inventory` |
-| `workspace/plugins/plugin-wdk-settlement/paymaster.ts` | `get_wallet_balance`, `quote_payment`, `execute_gasless_payment` |
+| `src/plugins/invoice-ops/ocr.ts` | `parse_invoice` |
+| `src/plugins/invoice-ops/matcher.ts` | `match_purchase_order` |
+| `src/plugins/procurement-forecast/algorithm.ts` | `run_usage_forecast`, `check_inventory` |
+| `src/plugins/wdk-settlement/paymaster.ts` | `get_wallet_balance`, `quote_payment`, `execute_gasless_payment` |
 
 **Contrato congelado:** `docs/PLUGIN_CONTRACT.md` — no renombrar tools ni cambiar params sin avisar.
 
@@ -44,7 +44,7 @@ npm run dev -- balance
 ```
 
 **Reglas:**
-- No editar `bin.mjs`, `harness/`, `app.js`, `ui/`
+- No editar `src/bin.ts`, `harness/`, `src/pear/app.ts`, `ui/`
 - `dryRun: false` explícito para txs reales
 - QVAC: structured output y tool calls en llamadas **separadas**
 
@@ -63,7 +63,7 @@ npm run ui:dev
 ```
 
 **Arquitectura:**
-- `ui/electron/main.mjs` — IPC → `dist/harness/ipc-bridge.js`
+- `ui/electron/main.mjs` — IPC → `dist/ipc/bridge.js`
 - `ui/electron/preload.mjs` — `window.pear.*` seguro
 - `ui/renderer/` — pantallas Inbox, Pagos, Forecast, Wallet
 

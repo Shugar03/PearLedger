@@ -1,0 +1,33 @@
+{
+  "purchaseOrderId": "PO-DEMO-ACME-042",
+  "vendor": "ACME SUPPLIES S.A.",
+  "date": "2026-08-18",
+  "currency": "USD",
+  "lineItems": [
+    {
+      "sku": "SKU-001",
+      "description": "Industrial bolts",
+      "quantity": 10,
+      "unitPrice": 12.5,
+      "total": 125
+    },
+    {
+      "sku": "SKU-002",
+      "description": "Steel brackets",
+      "quantity": 5,
+      "unitPrice": 40,
+      "total": 200
+    },
+    {
+      "sku": "PKG-001",
+      "description": "Packaging fee",
+      "quantity": 1,
+      "unitPrice": 25,
+      "total": 25
+    }
+  ],
+  "subtotal": 350,
+  "tax": 0,
+  "total": 350,
+  "status": "approved"
+}

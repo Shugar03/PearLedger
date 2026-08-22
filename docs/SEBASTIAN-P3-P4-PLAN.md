@@ -51,7 +51,7 @@ pear install pear://<key>               # instalación P2P
 
 #### 1.2 Cablear routing CLI → harness
 
-Reemplazar stubs en `bin.mjs`:
+Reemplazar stubs en `src/bin.ts`:
 
 | Ruta | Flujo |
 |------|-------|
@@ -60,14 +60,14 @@ Reemplazar stubs en `bin.mjs`:
 | `pay --vendor --amount` | `quote_payment` → `execute_gasless_payment` |
 | `balance` | `get_wallet_balance` |
 
-- [ ] Extraer `runHarness.ts` o módulo `cli/routes.mjs` (mantener `bin.mjs` delgado)
+- [ ] Extraer `runHarness.ts` o módulo `src/cli/run.ts` (mantener `src/bin.ts` delgado)
 - [ ] Fail-soft: si plugin falla al cargar, CLI sigue con warning
 - [ ] Output JSON estable para Evelin (`--json` flag opcional)
 
 #### 1.3 Contrato IPC para Evelin (mínimo viable)
 
-- [ ] Exportar eventos documentados en `harness/core.ts` (ya existen)
-- [ ] Crear `harness/ipc-bridge.ts` *(stub)* — wrapper `executeTool(name, params)` para Electron
+- [ ] Exportar eventos documentados en `src/core/harness.ts` (ya existen)
+- [ ] Crear `src/ipc/bridge.ts` *(stub)* — wrapper `executeTool(name, params)` para Electron
 - [ ] Actualizar `PLUGIN_CONTRACT.md` con flag `--json`
 
 **Commit sugerido:** `feat(p4): wire CLI to harness + plugin loader`
@@ -85,7 +85,7 @@ git checkout variant/daemon
 ```
 
 - [x] Submodule clonado @ `variant/daemon` (`1f0cebf`)
-- [x] Patrón updater replicado en `app.js` (ESM + `bootstrap-process.mjs`)
+- [x] Patrón updater replicado en `src/pear/app.ts` (ESM + `bootstrap-process.mjs`)
 
 #### 2.2 Pear key + config
 
@@ -130,7 +130,7 @@ pear touch                    # mint pear://<key>
 ```
 
 - [x] `.storage-demo/updates.log` creado (vacío sin update remoto — esperado)
-- [x] `await pear.updater.applyUpdate()` en `app.js`
+- [x] `await pear.updater.applyUpdate()` en `src/pear/app.ts`
 
 #### 3.3 Stage + provision (pre-CI)
 
@@ -172,7 +172,7 @@ Link estable CI: `pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o` (
 
 #### 4.2 Robustez
 
-- [ ] `workers/updater.js` alineado con `app.js` (evitar duplicación — consolidar si hace falta)
+- [ ] `workers/updater.js` alineado con `src/pear/app.ts` (evitar duplicación — consolidar si hace falta)
 - [ ] Documentar troubleshooting en README (INVALID_URL, Corestore lock, delay OTA)
 
 **Commit sugerido:** `feat(p3): pear-ci stage/provision + PEAR_PRIMARY_KEY`
@@ -185,7 +185,7 @@ Link estable CI: `pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o` (
 |---------|--------|
 | Tras Fase 1 | Merge `feat/p3-p4-pear-harness` → `main` **solo harness + routing** (Antony puede rebasear) |
 | Antony listo | Smoke E2E `ingest` + `pay` con handlers reales |
-| Evelin lista | Conectar `harness/ipc-bridge.ts` desde Electron |
+| Evelin lista | Conectar `src/ipc/bridge.ts` desde Electron |
 | Pre-demo | Tag `v0.1.0-demo` + pear:// estable |
 
 **Regla de merge:** PR pequeño por fase; no mezclar P3 OTA roto con P4 harness roto.
@@ -197,10 +197,10 @@ Link estable CI: `pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o` (
 ```
 app.js
 bin.mjs                    (+ cli/routes.* si extraes)
-harness/core.ts
-harness/loader.ts
-harness/hooks.ts
-harness/ipc-bridge.ts      (nuevo)
+src/core/harness.ts
+src/core/loader.ts
+src/core/hooks.ts
+src/ipc/bridge.ts      (nuevo)
 workers/updater.js
 pear.config.json
 package.json               (upgrade, scripts)
@@ -214,7 +214,7 @@ docs/SEBASTIAN-P3-P4-PLAN.md (este archivo)
 **NO tocar:**
 
 ```
-workspace/plugins/**/ocr.ts | paymaster.ts | algorithm.ts  → Antony
+src/plugins/**/ocr.ts | paymaster.ts | algorithm.ts  → Antony
 ui/ | electron/                                          → Evelin
 qvac.config.json | models/                               → Antony
 .env                                                     → Antony (local)
@@ -263,7 +263,7 @@ qvac.config.json | models/                               → Antony
 - [ ] harness.execute conectado a CLI
 - [ ] 8 tools registradas
 - [ ] Hooks >$1k + sanitización activos
-- [ ] Permalinks: harness/core.ts, bin.mjs, workers/updater.js
+- [ ] Permalinks: src/core/harness.ts, bin.mjs, workers/updater.js
 
 ---
 
