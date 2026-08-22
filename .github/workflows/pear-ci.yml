@@ -67,7 +67,7 @@ jobs:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           namespace: pearledger
           target: .
-          dry-run: true
+          dry-run: false
 
       - name: Verify upgrade link
         run: |
