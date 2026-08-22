@@ -8,8 +8,12 @@ models/*.gguf
 models/*.onnx
 workspace/invoices/*
 !workspace/invoices/.gitkeep
+!workspace/invoices/sample.png
+!workspace/invoices/sample.pdf
 workspace/purchase-orders/*
 !workspace/purchase-orders/.gitkeep
+!workspace/purchase-orders/PO-2026-001.json
+!workspace/purchase-orders/PO-2026-001.txt
 .DS_Store
 *.lock
 updater.lock
