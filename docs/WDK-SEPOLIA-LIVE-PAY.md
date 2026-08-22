@@ -101,7 +101,8 @@ Monto **>$1000** queda bloqueado por el hook humano salvo `confirmed: true` (UI/
 | `insufficient_token_balance` | Faucet MOCK USDt a la address del balance |
 | `token_balance_unavailable` / `rpc_unavailable` | `npm run test:p2-wdk` (ya trae `--use-system-ca`); o `SEPOLIA_RPC_URL` / `SEPOLIA_RPC_FALLBACKS` |
 | `execute_skipped_no_api_key` | `PIMLICO_API_KEY` en `.env` |
-| `pimlico_getUserOperationGasPrice` failed | Key/policy Pimlico, bundler Sepolia, o reintentar; quote dry-run puede seguir OK |
+| `pimlico_getUserOperationGasPrice` failed | **Normal quirk:** dry-run/`quote` con `isSponsored` **no llama** a ese RPC (devuelve fee $0 al toque). El **live** sí lo llama al armar el UserOp. Causas: API key inválida/sin Sepolia, rate limit, o bundler. El código reintenta con **Candide + ETH nativo** (necesitás ~ETH en la smart account, ya tenés ~0.002). Forzá nativo: `WDK_SEPOLIA_GAS_MODE=native`. Revisá key en [Pimlico dashboard](https://dashboard.pimlico.io/). |
+| Live OK pero `gasMode: "native"` | Transfer salió; gas pagado en ETH (no sponsorship). Quote sigue mostrando fee $0 para narrativa gasless. |
 | `bad address checksum` | Usar MOCK oficial `0xd077A400968890Eacc75cdc901F0356c943e4fDb` (ya normalizado en paymaster) |
 
 ## Referencias
