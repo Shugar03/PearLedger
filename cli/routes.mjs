@@ -96,7 +96,10 @@ export async function routeIngest(file, { json, accent, dim, reset }) {
       parsed.invoice?.invoiceNumber ??
       parsed.invoiceNumber ??
       'unknown'
-    match = await harness.execute('match_purchase_order', { invoiceId, invoice: parsed })
+    match = await harness.execute('match_purchase_order', {
+      invoiceId,
+      invoice: parsed.invoice ?? parsed
+    })
   }
 
   const result = { parsed, match }

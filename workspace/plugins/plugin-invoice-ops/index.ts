@@ -7,7 +7,7 @@ import { registerTools } from '../../../harness/loader.js'
 import type { Harness } from '../../../harness/core.js'
 import { ocrInvoice } from './ocr.js'
 import { matchPurchaseOrder } from './matcher.js'
-import { parseInvoiceSchema, type Invoice } from './schema.js'
+import { assessInvoice, parseInvoiceSchema, type Invoice } from './schema.js'
 
 export const name = 'plugin-invoice-ops'
 
@@ -20,9 +20,11 @@ export async function register(_h: Harness) {
         handler: async ({ filePath }: { filePath?: string }) => {
           if (!filePath) throw new Error('filePath required')
           const rawText = await ocrInvoice(filePath)
-          const invoice = await parseInvoiceSchema(rawText)
+          const strict = process.env.PEARLEDGER_STRICT_INVOICE !== 'false'
+          const invoice = await parseInvoiceSchema(rawText, { strict })
           return {
             invoice,
+            quality: assessInvoice(invoice),
             rawTextPreview: rawText.slice(0, 500)
           }
         }
