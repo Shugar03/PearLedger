@@ -58,9 +58,18 @@ function normalize(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9.\s$-]/g, ' ')
+    // Drop punctuation so "S.A." ≈ "SA" for vendor matching
+    .replace(/[^a-z0-9\s$-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Soft vendor equality — ignores dots/spacing noise from OCR. */
+function vendorsMatch(a: string, b: string): boolean {
+  const na = normalize(a).replace(/\s+/g, '')
+  const nb = normalize(b).replace(/\s+/g, '')
+  if (na === nb) return true
+  return na.includes(nb) || nb.includes(na)
 }
 
 function poToDocument(po: PurchaseOrder): string {
@@ -159,7 +168,7 @@ function buildQuery(invoice?: Invoice, invoiceId?: string): string {
 function compareThreeWay(invoice: Invoice, po: PurchaseOrder): MatchDiscrepancy[] {
   const discrepancies: MatchDiscrepancy[] = []
 
-  if (normalize(invoice.vendor) !== normalize(po.vendor)) {
+  if (!vendorsMatch(invoice.vendor, po.vendor)) {
     discrepancies.push({
       field: 'vendor',
       invoice: invoice.vendor,
@@ -329,7 +338,7 @@ async function matchFromFilesystem(
   for (const po of orders) {
     let score = 0
     if (params.invoice) {
-      if (normalize(params.invoice.vendor) === normalize(po.vendor)) score += 0.45
+      if (vendorsMatch(params.invoice.vendor, po.vendor)) score += 0.45
       if (Math.abs(params.invoice.total - po.total) < 0.01) score += 0.35
       if (params.invoice.lineItems.length === po.lineItems.length) score += 0.1
       const invDesc = normalize(params.invoice.lineItems[0]?.description ?? '')

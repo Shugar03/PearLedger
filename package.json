@@ -58,6 +58,7 @@
     "make:win32-x64": "bare-build --name pearledger --standalone --host win32-x64 --out ./out/win32-x64 bin.mjs",
     "models:download": "node scripts/download-models.mjs",
     "fixtures:seed": "node scripts/seed-demo-fixtures.mjs",
+    "fixtures:invoice": "powershell -NoProfile -File scripts/generate-demo-invoice.ps1",
     "predev": "npm run build:ts && npm run fixtures:seed",
     "test:block-3-8": "npm run build:ts && node --env-file=.env scripts/test-block-3-8.mjs",
     "test:matcher": "npm run build:ts && node --env-file=.env scripts/test-matcher-rag.mjs",
