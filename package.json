@@ -25,6 +25,7 @@
     "test:block-3-8": "npm run build:ts && node --env-file=.env scripts/test-block-3-8.mjs",
     "test:matcher": "npm run build:ts && node --env-file=.env scripts/test-matcher-rag.mjs",
     "test:block-8-12": "npm run build:ts && node --env-file=.env scripts/test-block-8-12.mjs",
+    "test:forecast": "npm run build:ts && node --env-file=.env scripts/test-forecast.mjs",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

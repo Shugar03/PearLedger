@@ -1,0 +1,42 @@
+[
+  {
+    "sku": "MAT-001",
+    "description": "Material de oficina",
+    "stock": 42,
+    "unit": "units",
+    "dailyUsage": 2.0,
+    "safetyThreshold": 10,
+    "vendor": "Proveedor Demo S.A.",
+    "unitPrice": 100
+  },
+  {
+    "sku": "MAT-002",
+    "description": "Toner laser negro",
+    "stock": 8,
+    "unit": "units",
+    "dailyUsage": 0.5,
+    "safetyThreshold": 5,
+    "vendor": "OfficeSupply LatAm",
+    "unitPrice": 45
+  },
+  {
+    "sku": "MAT-003",
+    "description": "Cajas de cartón 40x40",
+    "stock": 120,
+    "unit": "units",
+    "dailyUsage": 6,
+    "safetyThreshold": 30,
+    "vendor": "PackRight SA",
+    "unitPrice": 2.5
+  },
+  {
+    "sku": "SKU-RISK",
+    "description": "Insumo crítico de quiebre inminente",
+    "stock": 6,
+    "unit": "units",
+    "dailyUsage": 1.5,
+    "safetyThreshold": 12,
+    "vendor": "Proveedor Demo S.A.",
+    "unitPrice": 75
+  }
+]
