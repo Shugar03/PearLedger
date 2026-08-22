@@ -1,6 +1,11 @@
-import type { HookFn, Tool } from './core.js'
+import type { HookFn } from './core.js'
 
-const THRESHOLD = Number(process.env.HUMAN_CONFIRM_THRESHOLD_USDT || 1000)
+function threshold(): number {
+  const g = globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> }
+  }
+  return Number(g.process?.env?.HUMAN_CONFIRM_THRESHOLD_USDT || 1000)
+}
 
 /** Bloquea pagos > umbral hasta confirmación humana explícita. */
 export const paymentConfirmationHook: HookFn = async (tool, params) => {
@@ -9,6 +14,7 @@ export const paymentConfirmationHook: HookFn = async (tool, params) => {
   }
 
   const amount = Number(params.amount ?? 0)
+  const THRESHOLD = threshold()
   if (amount <= THRESHOLD) {
     return { proceed: true, params }
   }

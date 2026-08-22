@@ -58,7 +58,11 @@ export class Harness {
       ctx = await hook(tool, ctx.params)
       if (!ctx.proceed) {
         this.emit('tool:blocked', tool, ctx.params)
-        return { blocked: true, reason: 'hook rejected action' }
+        return {
+          blocked: true,
+          reason: (ctx.params.message as string) ?? 'hook rejected action',
+          requiresConfirmation: ctx.params.requiresConfirmation ?? false
+        }
       }
     }
 
@@ -66,6 +70,13 @@ export class Harness {
     const result = await tool.handler(ctx.params)
     this.emit('tool:done', tool, result)
     return result
+  }
+
+  /** Solo para tests — limpia tools y hooks. */
+  reset(): void {
+    this.tools.clear()
+    this.hooks = []
+    this.bus.clear()
   }
 }
 

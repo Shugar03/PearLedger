@@ -13,5 +13,8 @@ workspace/purchase-orders/*
 .DS_Store
 *.lock
 updater.lock
+.storage-demo/
+.storage-pear-ci/
+pear-stage/
 uploads/
 agent-tools/
