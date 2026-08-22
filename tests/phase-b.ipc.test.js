@@ -22,9 +22,10 @@ describe('Fase B — contrato IPC (Evelin)', () => {
 
   it('parse_invoice retorna objeto procesable', async () => {
     const result = await executeTool('parse_invoice', {
-      filePath: 'workspace/invoices/.gitkeep'
+      filePath: 'workspace/invoices/sample.png'
     })
     assert.ok(result !== null && typeof result === 'object')
+    assert.ok('invoice' in result || 'invoiceNumber' in result || 'vendor' in result)
   })
 
   it('get_wallet_balance retorna usdt para pantalla Wallet', async () => {
