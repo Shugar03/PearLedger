@@ -1,0 +1,46 @@
+name: Pear CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage:
+    name: Stage pear:// release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build linux-x64 binary
+        run: npm run make:linux-x64
+
+      - name: Stage to Pear (alpha channel)
+        env:
+          PEAR_PRIMARY_KEY: ${{ secrets.PEAR_PRIMARY_KEY }}
+        run: |
+          echo "TODO: pear stage alpha + pear provision"
+          echo "Configurar PEAR_PRIMARY_KEY en GitHub Secrets"
+          echo "Ver: https://docs.pears.com/getting-started/from-a-template/start-from-hello-pear-bare/"
+
+      - name: Verify upgrade link
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            if (pkg.upgrade.includes('YOUR_KEY')) {
+              console.error('⚠ Reemplazar pear://<YOUR_KEY_HERE> tras pear touch');
+              process.exit(1);
+            }
+            console.log('upgrade link:', pkg.upgrade);
+          "

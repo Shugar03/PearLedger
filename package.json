@@ -1,0 +1,72 @@
+{
+  "name": "pear-ledger",
+  "version": "0.1.0",
+  "description": "Agente local de operaciones financieras, tesorería y logística P2P — Hackathon Aleph 2026",
+  "productName": "pearledger",
+  "private": false,
+  "bin": "bin.mjs",
+  "upgrade": "pear://<YOUR_KEY_HERE>",
+  "type": "module",
+  "engines": {
+    "node": ">=22.17"
+  },
+  "scripts": {
+    "start": "bare bin.mjs --no-updates",
+    "dev": "node --experimental-strip-types bin.mjs --no-updates",
+    "build:ts": "tsc",
+    "make": "node scripts/make.js",
+    "make:darwin-arm64": "bare-build --name pearledger --standalone --host darwin-arm64 --out ./out/darwin-arm64 bin.mjs",
+    "make:darwin-x64": "bare-build --name pearledger --standalone --host darwin-x64 --out ./out/darwin-x64 bin.mjs",
+    "make:linux-arm64": "bare-build --name pearledger --standalone --host linux-arm64 --out ./out/linux-arm64 bin.mjs",
+    "make:linux-x64": "bare-build --name pearledger --standalone --host linux-x64 --out ./out/linux-x64 bin.mjs",
+    "make:win32-arm64": "bare-build --name pearledger --standalone --host win32-arm64 --out ./out/win32-arm64 bin.mjs",
+    "make:win32-x64": "bare-build --name pearledger --standalone --host win32-x64 --out ./out/win32-x64 bin.mjs",
+    "models:download": "node scripts/download-models.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@qvac/sdk": "^0.17.1",
+    "@tetherto/wdk-cli": "1.0.0-beta.2",
+    "@tetherto/wdk-wallet-evm-7702-gasless": "1.0.0-beta.4",
+    "@tetherto/wdk-wallet-evm-erc-4337": "1.0.0-beta.16",
+    "bare-console": "^6.2.0",
+    "bare-daemon": "^1.2.4",
+    "bare-file-logger": "^1.2.1",
+    "bare-fs": "^4.7.2",
+    "bare-os": "^3.9.0",
+    "bare-path": "^3.0.0",
+    "bare-process": "^4.5.0",
+    "bare-storage": "^1.1.0",
+    "corestore": "^7.9.2",
+    "fs-native-extensions": "^1.5.0",
+    "hyperswarm": "^4.17.0",
+    "paparam": "^1.10.1",
+    "pear-runtime": "^1.1.4",
+    "ready-resource": "^1.2.0",
+    "which-runtime": "^1.4.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "bare-build": "^1.0.1",
+    "bare-runtime": "^1.29.5",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Shugar03/PearLedger.git"
+  },
+  "keywords": [
+    "pear",
+    "qvac",
+    "wdk",
+    "gasless",
+    "local-first",
+    "p2p",
+    "hackathon",
+    "aleph"
+  ],
+  "author": "Sebastian Villarreal Paz",
+  "license": "Apache-2.0"
+}

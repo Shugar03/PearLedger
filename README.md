@@ -1,0 +1,132 @@
+# 🍐 PearLedger
+
+**Agente local de operaciones financieras, tesorería y logística P2P**
+
+Hackathon Aleph 2026 — Local-first · Gasless · P2P · Soberanía operativa
+
+> Las operaciones financieras y logísticas siguen atrapadas entre burocracia manual y vulnerabilidad de la nube. PearLedger propone operaciones agénticas soberanas: IA local ejecuta OCR, conciliación y pagos P2P sin comisiones, sin servidor central, sin gas nativo y sin telemetría saliente.
+
+## Quickstart
+
+```bash
+# 1. Clonar e instalar
+git clone https://github.com/Shugar03/PearLedger.git
+cd PearLedger
+npm install
+
+# 2. Configurar entorno
+cp .env.example .env
+# Editar: PIMLICO_API_KEY, SEPOLIA_RPC_URL, etc.
+
+# 3. Descargar modelos QVAC (~5 GB)
+npm run models:download
+
+# 4. Mintear pear:// key (requiere Pear CLI v3)
+pear touch
+# → Reemplazar pear://<YOUR_KEY_HERE> en package.json y pear.config.json
+
+# 5. Desarrollo local
+npm run dev -- ingest ./workspace/invoices/factura.pdf
+npm run dev -- forecast --sku ABC-123
+npm run dev -- pay --vendor 0x... --amount 250 --usdt
+npm run dev -- balance
+
+# 6. Instalar vía P2P (post-build)
+pear install pear://<key>
+```
+
+## Arquitectura
+
+Basado en [hello-pear-bare @ `variant/daemon`](https://github.com/holepunchto/hello-pear-bare/tree/variant/daemon) — short-lived CLI con updater daemon detached.
+
+```
+pearledger CLI (bin.mjs)
+    ├── QVAC SDK      → OCR + LLM + RAG (100% local)
+    ├── WDK CLI/MCP   → Pagos gasless USDt
+    ├── Bare runtime  → Sin Node.js en producción
+    └── Pear variant/daemon → OTA P2P (pear://<key>)
+```
+
+### Plugins (filosofía Cordis — sin dependencia)
+
+| Plugin | Tools | Track |
+|--------|-------|-------|
+| `plugin-invoice-ops` | `parse_invoice`, `match_purchase_order` | QVAC |
+| `plugin-procurement-forecast` | `check_inventory`, `run_usage_forecast`, `draft_purchase_order` | QVAC Pipeline |
+| `plugin-wdk-settlement` | `get_wallet_balance`, `quote_payment`, `execute_gasless_payment` | WDK |
+
+## Permalinks para el jurado
+
+| Track | Archivo clave |
+|-------|---------------|
+| **QVAC OCR** | [`workspace/plugins/plugin-invoice-ops/ocr.ts`](workspace/plugins/plugin-invoice-ops/ocr.ts) |
+| **QVAC RAG** | [`workspace/plugins/plugin-invoice-ops/matcher.ts`](workspace/plugins/plugin-invoice-ops/matcher.ts) |
+| **WDK Paymaster** | [`workspace/plugins/plugin-wdk-settlement/paymaster.ts`](workspace/plugins/plugin-wdk-settlement/paymaster.ts) |
+| **WDK Hooks >$1k** | [`harness/hooks.ts`](harness/hooks.ts) |
+| **Pear daemon/OTA** | [`workers/updater.js`](workers/updater.js) |
+| **Pear CLI entry** | [`bin.mjs`](bin.mjs) |
+| **Harness core** | [`harness/core.ts`](harness/core.ts) |
+| **Pear CI** | [`.github/workflows/pear-ci.yml`](.github/workflows/pear-ci.yml) |
+
+## Stack tecnológico y factibilidad
+
+### ✅ Factible para hackathon (24h)
+
+| Componente | Versión | Factibilidad | Notas |
+|------------|---------|--------------|-------|
+| **Pear CLI v3 + variant/daemon** | Pear v3 | ✅ Alta | Template probado (`hello-pear-bare`). OTA con `delay:0` en dev. |
+| **QVAC SDK** | `@qvac/sdk ^0.17` | ✅ Alta | OCR + LLM + embeddings en local. Node ≥22.17. ~5 GB modelos. |
+| **WDK CLI + MCP** | `1.0.0-beta.2` | ✅ Alta | 9 tools MCP, daemon local. Integración Claude Desktop documentada. |
+| **WDK Gasless 7702** | mainnet | ⚠️ Media | Requiere API key Pimlico/Candide + USDt real para demo mainnet. |
+| **WDK ERC-4337 Sepolia** | testnet | ✅ Alta | MOCK USDt en Sepolia — ideal para tests sin valor. |
+| **Mini-harness TypeScript** | custom | ✅ Alta | ~30 líneas event bus + hooks. Sin Cordis (incompatible Bare). |
+
+### Requisitos de hardware
+
+| Recurso | Mínimo | Recomendado |
+|---------|--------|-------------|
+| RAM | 8 GB | 16 GB |
+| Disco | 5 GB | 10 GB SSD |
+| Node | ≥22.17 | 22.18 LTS |
+
+### Gotchas críticos (del manifesto)
+
+- **`ctx_size` ≥ 4096** en `qvac.config.json` — default 1024 trunca facturas
+- **No combinar** structured output + tools en la misma llamada QVAC (HTTP 400)
+- **`dryRun:false` explícito** en WDK `send_token` — default es simulación
+- **`safeModulesVersion: '0.3.0'`** obligatorio en config WDK
+- **Sepolia usa MOCK USDt** (`0xd077a4...`) — no USDt real
+- **Pear `variant/daemon`** — NO usar `main` ni `variant/single-thread`
+- **OTA demo**: `--update-window 0` + `await pear.updater.applyUpdate()`
+
+## Documentación externa
+
+- [QVAC SDK](https://docs.qvac.tether.io/js-ts-sdk/)
+- [QVAC OCR](https://docs.qvac.tether.io/ai-capabilities/ocr/)
+- [WDK CLI](https://docs.wdk.tether.io/cli/)
+- [WDK EIP-7702 Gasless](https://docs.wdk.tether.io/sdk/wallet-modules/wallet-evm-7702-gasless/)
+- [Pear CLI v3](https://docs.pears.com/reference/pear/cli/)
+- [hello-pear-bare variant/daemon](https://github.com/holepunchto/hello-pear-bare/tree/variant/daemon)
+
+## Hoja de ruta 24h
+
+Ver [`docs/ROADMAP.md`](docs/ROADMAP.md) para el plan hora a hora del hackathon.
+
+## Tracks y premios (Aleph 2026)
+
+| Track | Premio | Estado skeleton |
+|-------|--------|-----------------|
+| Pear P2P + OTA | $1,500 | 🟡 Estructura lista |
+| QVAC OCR + LLM | $1,000 | 🟡 Stubs + permalinks |
+| QVAC Pipeline agéntico | $500 | 🟡 Harness + plugins |
+| WDK MCP (Pista 1) | $1,000 | 🟡 wdk-worker stub |
+| WDK Gasless (Pista 2) | $500 | 🟡 paymaster.ts stub |
+| Vault Guardian | $500 | 🟡 input sanitization hook |
+
+## Licencia
+
+Apache-2.0
+
+---
+
+🍐 **PearLedger** — Local-first · Gasless · P2P · Soberanía operativa
