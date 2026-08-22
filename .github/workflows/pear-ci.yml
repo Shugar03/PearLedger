@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pear-ci
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build TypeScript + Bare linux-x64
@@ -49,46 +53,35 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: actions/setup-node@v4
+      - name: Stage with pear-ci (requires PEAR_PRIMARY_KEY)
+        if: ${{ secrets.PEAR_PRIMARY_KEY != '' }}
+        uses: holepunchto/actions/pear-ci@main
         with:
-          node-version: '22'
+          primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
+          namespace: pearledger
+          target: .
+          dry-run: true
 
-      - name: Install Pear CLI
-        run: curl -fsSL https://install.pears.com/pear.sh | sh
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Compile TypeScript
-        run: npm run build:ts
-
-      - name: Stage and provision (alpha)
-        env:
-          PEAR_PRIMARY_KEY: ${{ secrets.PEAR_PRIMARY_KEY }}
+      - name: Skip stage (secret missing)
+        if: ${{ secrets.PEAR_PRIMARY_KEY == '' }}
         run: |
-          if [ -z "$PEAR_PRIMARY_KEY" ]; then
-            echo "::warning::PEAR_PRIMARY_KEY not set — skipping pear stage/provision"
-            echo "Configure GitHub secret PEAR_PRIMARY_KEY for stable pear:// link"
-            exit 0
-          fi
-          export PATH="$HOME/.local/bin:$PATH"
-          npm run make:linux-x64
-          PEAR_LINK=$(node -p "require('./package.json').upgrade")
-          pear stage "$PEAR_LINK" --ignore node_modules,.git,out,dist,.storage-demo,vendor
-          pear info "$PEAR_LINK"
-          echo "Release staged on channel alpha (see pear info for verlinks)"
+          echo "::warning::PEAR_PRIMARY_KEY not set — skipping pear-ci stage"
+          echo "Add repository secret PEAR_PRIMARY_KEY (openssl rand -hex 32)"
 
       - name: Verify upgrade link
         run: |
           node -e "
             const pkg = require('./package.json');
             if (pkg.upgrade.includes('YOUR_KEY')) {
-              console.log('::warning::Replace pear:// key after pear touch locally');
+              console.log('::warning::Replace pear:// key after first pear-ci run (see Actions log)');
               process.exit(0);
             }
             console.log('upgrade link:', pkg.upgrade);
