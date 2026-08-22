@@ -3,6 +3,9 @@
  * Dev entrypoint — Node + strip-types (sin módulos Bare).
  * Producción / OTA: bin.mjs vía Bare (npm start / pearledger.exe).
  */
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import pkg from '../package.json' with { type: 'json' }
 import {
   routeBalance,
@@ -11,6 +14,35 @@ import {
   routePay,
   routeTools
 } from './routes-node.mjs'
+
+/** Carga .env del repo sin dependencia extra (no loguea valores). */
+function loadDotEnv() {
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+  const envPath = path.join(root, '.env')
+  if (!existsSync(envPath)) return
+  const text = readFileSync(envPath, 'utf8')
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq <= 0) continue
+    const key = trimmed.slice(0, eq).trim()
+    let value = trimmed.slice(eq + 1).trim()
+    const hash = value.indexOf(' #')
+    if (hash >= 0) value = value.slice(0, hash).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    if (!(key in process.env) || process.env[key] === '') {
+      process.env[key] = value
+    }
+  }
+}
+
+loadDotEnv()
 
 const ACCENT = '\x1b[38;2;196;245;60m'
 const RESET = '\x1b[0m'
@@ -39,6 +71,10 @@ function parseArgs(argv) {
     }
     if (a === '--amount' && argv[i + 1]) {
       flags.amount = argv[++i]
+      continue
+    }
+    if (a === '--network' && argv[i + 1]) {
+      flags.network = argv[++i]
       continue
     }
     if (a.startsWith('--dry-run')) {
@@ -96,18 +132,24 @@ try {
       }
       const dryRun = flags.dryRun === false ? false : true
       await routePay(
-        { vendor: flags.vendor, amount: flags.amount, dryRun, dryRunFlag: dryRun },
+        {
+          vendor: flags.vendor,
+          amount: flags.amount,
+          dryRun,
+          dryRunFlag: dryRun,
+          network: flags.network
+        },
         style
       )
       break
     }
     case 'balance':
-      await routeBalance(style)
+      await routeBalance({ ...style, network: flags.network })
       break
     default:
       if (!json) {
         console.log('Comandos: ingest | forecast | pay | balance | tools')
-        console.log('Flags globales: --json')
+        console.log('Flags: --json | --sku | --vendor | --amount | --dry-run | --network sepolia|mainnet')
       }
   }
 } catch (err) {
