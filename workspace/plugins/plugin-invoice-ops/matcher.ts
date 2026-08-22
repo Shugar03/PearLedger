@@ -260,20 +260,24 @@ export async function matchPurchaseOrder(params: {
       }
     }
 
-    const hits = await ragSearch({
+    const hits = (await ragSearch({
       modelId,
       workspace: WORKSPACE,
       query,
       topK: 3
-    })
+    })) ?? []
 
-    if (!hits.length) {
+    if (!Array.isArray(hits) || hits.length === 0) {
       return matchFromFilesystem(params, invoiceId)
     }
 
-    const top = hits[0]!
+    const top = hits[0]
+    if (!top?.content) {
+      return matchFromFilesystem(params, invoiceId)
+    }
+
     const po = parsePoFromRagContent(top.content)
-    const ragScore = top.score
+    const ragScore = Number(top.score ?? 0)
 
     if (!po) {
       return matchFromFilesystem(params, invoiceId)
