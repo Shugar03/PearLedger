@@ -79,7 +79,44 @@ function providerUrl(network: Network): string {
   if (network === 'mainnet') {
     return process.env.MAINNET_RPC_URL || 'https://rpc.mevblocker.io/fast'
   }
-  return process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com'
+  return sepoliaRpcUrls()[0]
+}
+
+/** Ordered Sepolia RPC list — primary + fallbacks (TLS/outages). */
+function sepoliaRpcUrls(): string[] {
+  const primary = process.env.SEPOLIA_RPC_URL?.trim()
+  const extras = (process.env.SEPOLIA_RPC_FALLBACKS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const defaults = [
+    'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://1rpc.io/sepolia',
+    'https://sepolia.drpc.org',
+    'https://rpc.sepolia.org'
+  ]
+  return [...new Set([...(primary ? [primary] : []), ...extras, ...defaults])]
+}
+
+function isRpcConnectivityError(err: unknown): boolean {
+  const msg = errorMessage(err).toLowerCase()
+  return (
+    msg.includes('certificate') ||
+    msg.includes('ssl') ||
+    msg.includes('tls') ||
+    msg.includes('unable to verify') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout') ||
+    msg.includes('econnrefused') ||
+    msg.includes('enotfound') ||
+    msg.includes('network') ||
+    msg.includes('fetch failed') ||
+    msg.includes('socket hang up') ||
+    msg.includes('bad gateway') ||
+    msg.includes('503') ||
+    msg.includes('502') ||
+    msg.includes('429')
+  )
 }
 
 /** Lowercase hex — ethers rejects mixed-case that fails EIP-55 checksum. */
@@ -128,11 +165,11 @@ function errorMessage(err: unknown): string {
   return String(err)
 }
 
-function createSepoliaWallet(): DisposableWallet {
+function createSepoliaWallet(provider?: string): DisposableWallet {
   const bundlerUrl = pimlicoBundlerUrl('sepolia')
   const baseConfig = {
     chainId: SEPOLIA_CHAIN_ID,
-    provider: providerUrl('sepolia'),
+    provider: provider || providerUrl('sepolia'),
     bundlerUrl,
     safeModulesVersion: SAFE_MODULES_VERSION
   }
@@ -173,8 +210,46 @@ function createMainnetWallet(): DisposableWallet {
   }) as DisposableWallet
 }
 
-function createWallet(network: Network): DisposableWallet {
-  return network === 'mainnet' ? createMainnetWallet() : createSepoliaWallet()
+function createWallet(network: Network, provider?: string): DisposableWallet {
+  return network === 'mainnet' ? createMainnetWallet() : createSepoliaWallet(provider)
+}
+
+/**
+ * Run against Sepolia with RPC failover on TLS/network errors.
+ * Mainnet uses a single provider (no failover list).
+ */
+async function withRpcFallback<T>(
+  network: Network,
+  run: (wallet: DisposableWallet, rpc: string) => Promise<T>
+): Promise<T> {
+  if (network === 'mainnet') {
+    const rpc = providerUrl('mainnet')
+    const wallet = createWallet('mainnet')
+    try {
+      return await run(wallet, rpc)
+    } finally {
+      wallet.dispose()
+    }
+  }
+
+  const urls = sepoliaRpcUrls()
+  let lastErr: unknown
+  for (let i = 0; i < urls.length; i++) {
+    const rpc = urls[i]
+    const wallet = createSepoliaWallet(rpc)
+    try {
+      return await run(wallet, rpc)
+    } catch (err) {
+      lastErr = err
+      if (!isRpcConnectivityError(err) || i === urls.length - 1) throw err
+      console.warn(
+        `[wdk] Sepolia RPC failed (${rpc}): ${errorMessage(err)} — fallback ${i + 2}/${urls.length}`
+      )
+    } finally {
+      wallet.dispose()
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
 }
 
 export async function getWalletBalance(params: { network?: string } = {}) {
@@ -192,41 +267,58 @@ export async function getWalletBalance(params: { network?: string } = {}) {
     }
   }
 
-  const wallet = createWallet(network)
   try {
-    const account = await wallet.getAccount(0)
-    const address = await account.getAddress()
-    const token = tokenAddress(network)
+    return await withRpcFallback(network, async (wallet, rpc) => {
+      const account = await wallet.getAccount(0)
+      const address = await account.getAddress()
+      const token = tokenAddress(network)
 
-    let usdt = '0.00'
-    let native = '0.00'
+      let usdt = '0.00'
+      let native = '0.00'
+      let tokenErr: unknown
+      let nativeErr: unknown
 
-    try {
-      usdt = fromBaseUnits(await account.getTokenBalance(token))
-    } catch {
-      // undeployed / no token yet
-    }
+      try {
+        usdt = fromBaseUnits(await account.getTokenBalance(token))
+      } catch (err) {
+        tokenErr = err
+      }
 
-    try {
-      // native wei — report as ETH-ish decimal with 6 places for demo readability
-      const wei = await account.getBalance()
-      native = (Number(wei) / 1e18).toFixed(6)
-    } catch {
-      // ignore
-    }
+      try {
+        const wei = await account.getBalance()
+        native = (Number(wei) / 1e18).toFixed(6)
+      } catch (err) {
+        nativeErr = err
+      }
 
+      // Don't mask TLS/RPC failures as "0.00" — trigger failover
+      if (tokenErr && isRpcConnectivityError(tokenErr)) throw tokenErr
+      if (nativeErr && isRpcConnectivityError(nativeErr)) throw nativeErr
+
+      return {
+        safeModulesVersion: SAFE_MODULES_VERSION,
+        usdt,
+        native,
+        address,
+        network,
+        token,
+        rpc,
+        mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
+        status: 'ok'
+      }
+    })
+  } catch (err) {
     return {
       safeModulesVersion: SAFE_MODULES_VERSION,
-      usdt,
-      native,
-      address,
+      usdt: '0.00',
+      native: '0.00',
+      address: null,
       network,
-      token,
-      mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
-      status: 'ok'
+      status: 'rpc_unavailable',
+      error: errorMessage(err),
+      hint:
+        'Sepolia RPC/TLS falló en todos los endpoints. Probá NODE_OPTIONS=--use-system-ca o cambiá SEPOLIA_RPC_URL / SEPOLIA_RPC_FALLBACKS'
     }
-  } finally {
-    wallet.dispose()
   }
 }
 
@@ -264,29 +356,31 @@ export async function quotePayment(params: {
     return result
   }
 
-  const wallet = createWallet(network)
   try {
-    const account = await wallet.getAccount(0)
-    const quote = await account.quoteTransfer({
-      token: tokenAddress(network),
-      recipient,
-      amount: toBaseUnits(params.amount)
+    return await withRpcFallback(network, async (wallet, rpc) => {
+      const account = await wallet.getAccount(0)
+      const quote = await account.quoteTransfer({
+        token: tokenAddress(network),
+        recipient,
+        amount: toBaseUnits(params.amount!)
+      })
+
+      const result = {
+        to: recipient,
+        amount: params.amount,
+        fee: fromBaseUnits(quote.fee),
+        sponsored: true,
+        paymaster: paymasterAddress(),
+        safeModulesVersion: SAFE_MODULES_VERSION,
+        network,
+        rpc,
+        mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
+        status: 'ok'
+      }
+
+      quoteCache = { key, result, expiresAt: now + QUOTE_TTL_MS }
+      return result
     })
-
-    const result = {
-      to: recipient,
-      amount: params.amount,
-      fee: fromBaseUnits(quote.fee),
-      sponsored: true,
-      paymaster: paymasterAddress(),
-      safeModulesVersion: SAFE_MODULES_VERSION,
-      network,
-      mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
-      status: 'ok'
-    }
-
-    quoteCache = { key, result, expiresAt: now + QUOTE_TTL_MS }
-    return result
   } catch (err) {
     const result = {
       to: recipient,
@@ -297,12 +391,13 @@ export async function quotePayment(params: {
       safeModulesVersion: SAFE_MODULES_VERSION,
       network,
       status: 'quote_failed',
-      error: errorMessage(err)
+      error: errorMessage(err),
+      hint: isRpcConnectivityError(err)
+        ? 'RPC/TLS — probá node --use-system-ca o SEPOLIA_RPC_FALLBACKS'
+        : undefined
     }
     quoteCache = { key, result, expiresAt: now + QUOTE_TTL_MS }
     return result
-  } finally {
-    wallet.dispose()
   }
 }
 
@@ -344,61 +439,66 @@ export async function executeGaslessPayment(params: {
     }
   }
 
-  const wallet = createWallet(network)
   try {
-    const account = await wallet.getAccount(0)
-    const token = tokenAddress(network)
-    const amount = toBaseUnits(params.amount)
+    return await withRpcFallback(network, async (wallet, rpc) => {
+      const account = await wallet.getAccount(0)
+      const token = tokenAddress(network)
+      const amount = toBaseUnits(params.amount!)
 
-    let bal: bigint
-    try {
-      bal = await account.getTokenBalance(token)
-    } catch (err) {
-      return {
-        dryRun: false,
-        txHash: null,
-        network,
+      let bal: bigint
+      try {
+        bal = await account.getTokenBalance(token)
+      } catch (err) {
+        if (isRpcConnectivityError(err)) throw err
+        return {
+          dryRun: false,
+          txHash: null,
+          network,
+          token,
+          rpc,
+          address: await account.getAddress(),
+          safeModulesVersion: SAFE_MODULES_VERSION,
+          status: 'token_balance_unavailable',
+          error: errorMessage(err),
+          hint: 'No se pudo leer saldo del token — verificá RPC Sepolia y la dirección MOCK USDt'
+        }
+      }
+
+      if (bal < amount) {
+        return {
+          dryRun: false,
+          txHash: null,
+          network,
+          rpc,
+          address: await account.getAddress(),
+          usdt: fromBaseUnits(bal),
+          required: fromBaseUnits(amount),
+          safeModulesVersion: SAFE_MODULES_VERSION,
+          status: 'insufficient_token_balance',
+          hint:
+            network === 'sepolia'
+              ? `Fondeá MOCK USDt (${token}) en la smart account`
+              : 'Fondeá USDt mainnet en la EOA antes de dryRun:false'
+        }
+      }
+
+      const result = await account.transfer({
         token,
-        address: await account.getAddress(),
-        safeModulesVersion: SAFE_MODULES_VERSION,
-        status: 'token_balance_unavailable',
-        error: errorMessage(err),
-        hint: 'No se pudo leer saldo del token — verificá RPC Sepolia y la dirección MOCK USDt'
-      }
-    }
+        recipient,
+        amount
+      })
 
-    if (bal < amount) {
       return {
         dryRun: false,
-        txHash: null,
+        txHash: result.hash,
+        fee: fromBaseUnits(result.fee),
         network,
-        address: await account.getAddress(),
-        usdt: fromBaseUnits(bal),
-        required: fromBaseUnits(amount),
+        rpc,
+        mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
         safeModulesVersion: SAFE_MODULES_VERSION,
-        status: 'insufficient_token_balance',
-        hint:
-          network === 'sepolia'
-            ? `Fondeá MOCK USDt (${token}) en la smart account`
-            : 'Fondeá USDt mainnet en la EOA antes de dryRun:false'
+        status: 'ok'
       }
-    }
-
-    const result = await account.transfer({
-      token,
-      recipient,
-      amount
     })
-
-    return {
-      dryRun: false,
-      txHash: result.hash,
-      fee: fromBaseUnits(result.fee),
-      network,
-      mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
-      safeModulesVersion: SAFE_MODULES_VERSION,
-      status: 'ok'
-    }
   } catch (err) {
     return {
       dryRun: false,
@@ -406,9 +506,10 @@ export async function executeGaslessPayment(params: {
       network,
       safeModulesVersion: SAFE_MODULES_VERSION,
       status: 'execute_failed',
-      error: errorMessage(err)
+      error: errorMessage(err),
+      hint: isRpcConnectivityError(err)
+        ? 'RPC/TLS — usá node --use-system-ca o SEPOLIA_RPC_FALLBACKS'
+        : undefined
     }
-  } finally {
-    wallet.dispose()
   }
 }
