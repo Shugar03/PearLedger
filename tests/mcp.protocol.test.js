@@ -1,13 +1,17 @@
 /**
  * TDD — protocolo MCP (Client ↔ Server in-process)
- * SPEC: MCP-T01…T09
+ * SPEC: MCP-T01…T10
  *
  * Red → green: listTools / callTool contra createPearledgerMcpServer().
  */
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
+import os from 'node:os'
+import path from 'node:path'
+import { access } from 'node:fs/promises'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { loadPlugins, harness } from '../dist/harness/loader.js'
+import { repoRoot } from '../dist/harness/runtime.js'
 import { createPearledgerMcpServer } from '../workers/pearledger-mcp.js'
 import { contractToolNames } from '../contracts/load-contract.js'
 import { createLinkedTransports } from './helpers/linked-mcp-transport.js'
@@ -119,5 +123,24 @@ describe('MCP TDD (protocolo)', () => {
       arguments: {}
     })
     assert.equal(result.isError, true)
+  })
+
+  it('MCP-T10: fixtures vía repoRoot aunque cwd sea incorrecto', async () => {
+    const root = repoRoot()
+    await access(path.join(root, 'workspace', 'inventory', 'stock.json'))
+    const prev = process.cwd()
+    try {
+      process.chdir(os.tmpdir())
+      assert.notEqual(process.cwd(), root)
+      const result = await client.callTool({
+        name: 'check_inventory',
+        arguments: {}
+      })
+      assert.notEqual(result.isError, true)
+      const parsed = JSON.parse(result.content[0].text)
+      assert.ok(Array.isArray(parsed) && parsed.length > 0)
+    } finally {
+      process.chdir(prev)
+    }
   })
 })
