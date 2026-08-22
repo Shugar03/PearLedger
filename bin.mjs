@@ -50,12 +50,14 @@ const payCmd = command(
   flag('--vendor <address>', 'Dirección del proveedor (0x...)'),
   flag('--amount <usdt>', 'Monto en USDt'),
   flag('--usdt', 'Usar USDt como token de pago'),
+  flag('--network <network>', 'Red: sepolia (default) | mainnet'),
   flag('--dry-run [value]', 'Simular sin ejecutar (default). Usar --dry-run=false para ejecutar')
 )
 
 const balanceCmd = command(
   'balance',
-  summary('Consulta saldo de wallet WDK')
+  summary('Consulta saldo de wallet WDK'),
+  flag('--network <network>', 'Red: sepolia (default) | mainnet')
 )
 
 const toolsCmd = command(
@@ -138,7 +140,7 @@ try {
     else if (dryRunVal === undefined) dryRunVal = true
     await routePay({ ...leaf.flags, dryRun: dryRunVal, dryRunFlag: dryRunVal }, routeOpts)
   } else if (sub === 'balance') {
-    await routeBalance(routeOpts)
+    await routeBalance({ ...routeOpts, network: leaf.flags.network })
   } else if (sub === 'tools') {
     await routeTools(routeOpts)
   } else if (!json) {

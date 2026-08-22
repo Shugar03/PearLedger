@@ -4,14 +4,19 @@
  * Sepolia: wdk-wallet-evm-erc-4337 (EntryPoint v0.7 + MOCK USDt)
  *
  * safeModulesVersion: '0.3.0' obligatorio
+ *
+ * Permalink jurado WDK: workspace/plugins/plugin-wdk-settlement/paymaster.ts
  */
 
 import WalletManagerEvmErc4337 from '@tetherto/wdk-wallet-evm-erc-4337'
+import WalletManagerEvm7702Gasless from '@tetherto/wdk-wallet-evm-7702-gasless'
 
 const SAFE_MODULES_VERSION = process.env.WDK_SAFE_MODULES_VERSION || '0.3.0'
 const QUOTE_TTL_MS = 2 * 60 * 1000
 const SEPOLIA_CHAIN_ID = 11155111
 const USDT_DECIMALS = 6
+const DEFAULT_DELEGATION =
+  process.env.WDK_DELEGATION_ADDRESS || '0xe6Cae83BdE06E4c305530e199D7217f42808555B'
 
 interface QuoteCache {
   key: string
@@ -23,16 +28,39 @@ let quoteCache: QuoteCache | null = null
 
 type Network = 'mainnet' | 'sepolia'
 
+type DisposableWallet = {
+  getAccount: (index?: number) => Promise<{
+    getAddress: () => Promise<string>
+    getBalance: () => Promise<bigint>
+    getTokenBalance: (token: string) => Promise<bigint>
+    quoteTransfer: (opts: {
+      token: string
+      recipient: string
+      amount: bigint
+    }) => Promise<{ fee: bigint }>
+    transfer: (opts: {
+      token: string
+      recipient: string
+      amount: bigint
+    }) => Promise<{ hash: string; fee: bigint }>
+  }>
+  dispose: () => void
+}
+
 function requireSeed(): string {
-  const seed =
+  return (
     process.env.WDK_SEED_PHRASE ||
     process.env.SEED_PHRASE ||
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
-  return seed
+  )
 }
 
 function resolveNetwork(network?: string): Network {
   return network === 'mainnet' ? 'mainnet' : 'sepolia'
+}
+
+function hasPaymasterKey(): boolean {
+  return Boolean(process.env.PIMLICO_API_KEY?.trim() || process.env.CANDIDE_API_KEY?.trim())
 }
 
 function pimlicoBundlerUrl(network: Network): string {
@@ -49,16 +77,40 @@ function pimlicoBundlerUrl(network: Network): string {
 
 function providerUrl(network: Network): string {
   if (network === 'mainnet') {
-    return process.env.MAINNET_RPC_URL || 'https://eth.llamarpc.com'
+    return process.env.MAINNET_RPC_URL || 'https://rpc.mevblocker.io/fast'
   }
-  return process.env.SEPOLIA_RPC_URL || 'https://rpc.sepolia.org'
+  return process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com'
+}
+
+/** Lowercase hex — ethers rejects mixed-case that fails EIP-55 checksum. */
+function normalizeAddress(address: string): string {
+  const trimmed = address.trim()
+  if (!/^0x[0-9a-fA-F]{40}$/.test(trimmed)) {
+    throw new Error(`Invalid EVM address: ${address}`)
+  }
+  return trimmed.toLowerCase()
 }
 
 function tokenAddress(network: Network): string {
   if (network === 'mainnet') {
-    return process.env.WDK_USDT_MAINNET || '0xdAC17F958D2ee523468220AC697809737E73D23ec7'
+    return normalizeAddress(
+      process.env.WDK_USDT_MAINNET || '0xdAC17F958D2ee523468220AC697809737E73D23ec7'
+    )
   }
-  return process.env.WDK_MOCK_USDT_SEPOLIA || '0xd077a40066800590F633c0000900f7F6cD0A10dB'
+  // Official WDK Sepolia MOCK USDt (see @tetherto/wdk-cli wdk.tokens.json)
+  const MOCK_USDT = '0xd077A400968890Eacc75cdc901F0356c943e4fDb'
+  const LEGACY_BAD = '0xd077a40066800590f633c0000900f7f6cd0a10db'
+  const fromEnv = process.env.WDK_MOCK_USDT_SEPOLIA?.trim()
+  if (fromEnv && normalizeAddress(fromEnv) !== LEGACY_BAD) {
+    return normalizeAddress(fromEnv)
+  }
+  return normalizeAddress(MOCK_USDT)
+}
+
+function paymasterAddress(): string {
+  return normalizeAddress(
+    process.env.WDK_PAYMASTER_ADDRESS || '0x8888888888888888888888888888888888882402'
+  )
 }
 
 function toBaseUnits(amount: number): bigint {
@@ -71,10 +123,13 @@ function fromBaseUnits(value: bigint): string {
   return `${whole}.${frac.toString().padStart(USDT_DECIMALS, '0')}`
 }
 
-function createSepoliaWallet() {
-  const apiKey = process.env.PIMLICO_API_KEY || process.env.CANDIDE_API_KEY
-  const bundlerUrl = pimlicoBundlerUrl('sepolia')
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  return String(err)
+}
 
+function createSepoliaWallet(): DisposableWallet {
+  const bundlerUrl = pimlicoBundlerUrl('sepolia')
   const baseConfig = {
     chainId: SEPOLIA_CHAIN_ID,
     provider: providerUrl('sepolia'),
@@ -82,52 +137,80 @@ function createSepoliaWallet() {
     safeModulesVersion: SAFE_MODULES_VERSION
   }
 
-  if (apiKey) {
+  if (hasPaymasterKey()) {
     return new WalletManagerEvmErc4337(requireSeed(), {
       ...baseConfig,
       isSponsored: true,
       paymasterUrl: bundlerUrl
-    })
+    }) as DisposableWallet
   }
 
   return new WalletManagerEvmErc4337(requireSeed(), {
     ...baseConfig,
     useNativeCoins: true
-  })
+  }) as DisposableWallet
+}
+
+function createMainnetWallet(): DisposableWallet {
+  const bundlerUrl = pimlicoBundlerUrl('mainnet')
+  const policyId = process.env.WDK_SPONSORSHIP_POLICY_ID
+
+  if (policyId) {
+    return new WalletManagerEvm7702Gasless(requireSeed(), {
+      provider: providerUrl('mainnet'),
+      delegationAddress: DEFAULT_DELEGATION,
+      bundlerUrl,
+      isSponsored: true,
+      sponsorshipPolicyId: policyId
+    }) as DisposableWallet
+  }
+
+  return new WalletManagerEvm7702Gasless(requireSeed(), {
+    provider: providerUrl('mainnet'),
+    delegationAddress: DEFAULT_DELEGATION,
+    bundlerUrl,
+    isSponsored: true
+  }) as DisposableWallet
+}
+
+function createWallet(network: Network): DisposableWallet {
+  return network === 'mainnet' ? createMainnetWallet() : createSepoliaWallet()
 }
 
 export async function getWalletBalance(params: { network?: string } = {}) {
   const network = resolveNetwork(params.network)
-  if (network !== 'sepolia') {
+
+  if (network === 'mainnet' && !hasPaymasterKey()) {
     return {
       safeModulesVersion: SAFE_MODULES_VERSION,
       usdt: '0.00',
       native: '0.00',
       address: null,
       network,
-      status: 'mainnet_pending_implementation'
+      status: 'mainnet_needs_api_key',
+      hint: 'Set PIMLICO_API_KEY for mainnet EIP-7702'
     }
   }
 
-  const wallet = createSepoliaWallet()
+  const wallet = createWallet(network)
   try {
     const account = await wallet.getAccount(0)
     const address = await account.getAddress()
-    const token = tokenAddress('sepolia')
+    const token = tokenAddress(network)
 
     let usdt = '0.00'
     let native = '0.00'
 
     try {
-      const tokenBal = await account.getTokenBalance(token)
-      usdt = fromBaseUnits(tokenBal)
+      usdt = fromBaseUnits(await account.getTokenBalance(token))
     } catch {
-      // account may be undeployed or token unavailable
+      // undeployed / no token yet
     }
 
     try {
-      const nativeBal = await account.getBalance()
-      native = fromBaseUnits(nativeBal)
+      // native wei — report as ETH-ish decimal with 6 places for demo readability
+      const wei = await account.getBalance()
+      native = (Number(wei) / 1e18).toFixed(6)
     } catch {
       // ignore
     }
@@ -137,8 +220,9 @@ export async function getWalletBalance(params: { network?: string } = {}) {
       usdt,
       native,
       address,
-      network: 'sepolia',
+      network,
       token,
+      mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
       status: 'ok'
     }
   } finally {
@@ -159,32 +243,19 @@ export async function quotePayment(params: {
     return { ...(quoteCache.result as object), cached: true }
   }
 
-  if (network !== 'sepolia') {
-    const result = {
-      to: params.to,
-      amount: params.amount,
-      fee: '0.00',
-      sponsored: true,
-      paymaster: process.env.WDK_PAYMASTER_ADDRESS,
-      safeModulesVersion: SAFE_MODULES_VERSION,
-      network,
-      status: 'mainnet_pending_implementation'
-    }
-    quoteCache = { key, result, expiresAt: now + QUOTE_TTL_MS }
-    return result
-  }
-
   if (!params.to || params.amount == null) {
     throw new Error('quotePayment requires to and amount')
   }
 
-  if (!process.env.PIMLICO_API_KEY && !process.env.CANDIDE_API_KEY) {
+  const recipient = normalizeAddress(params.to)
+
+  if (!hasPaymasterKey()) {
     const result = {
-      to: params.to,
+      to: recipient,
       amount: params.amount,
       fee: '0.00',
       sponsored: true,
-      network: 'sepolia',
+      network,
       safeModulesVersion: SAFE_MODULES_VERSION,
       status: 'quote_skipped_no_api_key',
       hint: 'Set PIMLICO_API_KEY in .env for live gasless quote'
@@ -193,26 +264,41 @@ export async function quotePayment(params: {
     return result
   }
 
-  const wallet = createSepoliaWallet()
+  const wallet = createWallet(network)
   try {
     const account = await wallet.getAccount(0)
     const quote = await account.quoteTransfer({
-      token: tokenAddress('sepolia'),
-      recipient: params.to,
+      token: tokenAddress(network),
+      recipient,
       amount: toBaseUnits(params.amount)
     })
 
     const result = {
-      to: params.to,
+      to: recipient,
       amount: params.amount,
       fee: fromBaseUnits(quote.fee),
       sponsored: true,
-      paymaster: process.env.WDK_PAYMASTER_ADDRESS,
+      paymaster: paymasterAddress(),
       safeModulesVersion: SAFE_MODULES_VERSION,
-      network: 'sepolia',
+      network,
+      mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
       status: 'ok'
     }
 
+    quoteCache = { key, result, expiresAt: now + QUOTE_TTL_MS }
+    return result
+  } catch (err) {
+    const result = {
+      to: recipient,
+      amount: params.amount,
+      fee: '0.00',
+      sponsored: true,
+      paymaster: paymasterAddress(),
+      safeModulesVersion: SAFE_MODULES_VERSION,
+      network,
+      status: 'quote_failed',
+      error: errorMessage(err)
+    }
     quoteCache = { key, result, expiresAt: now + QUOTE_TTL_MS }
     return result
   } finally {
@@ -246,16 +332,9 @@ export async function executeGaslessPayment(params: {
     throw new Error('executeGaslessPayment requires to and amount')
   }
 
-  if (network !== 'sepolia') {
-    return {
-      dryRun: false,
-      txHash: null,
-      status: 'mainnet_pending_implementation',
-      safeModulesVersion: SAFE_MODULES_VERSION
-    }
-  }
+  const recipient = normalizeAddress(params.to)
 
-  if (!process.env.PIMLICO_API_KEY && !process.env.CANDIDE_API_KEY) {
+  if (!hasPaymasterKey()) {
     return {
       dryRun: false,
       txHash: null,
@@ -265,22 +344,69 @@ export async function executeGaslessPayment(params: {
     }
   }
 
-  const wallet = createSepoliaWallet()
+  const wallet = createWallet(network)
   try {
     const account = await wallet.getAccount(0)
+    const token = tokenAddress(network)
+    const amount = toBaseUnits(params.amount)
+
+    let bal: bigint
+    try {
+      bal = await account.getTokenBalance(token)
+    } catch (err) {
+      return {
+        dryRun: false,
+        txHash: null,
+        network,
+        token,
+        address: await account.getAddress(),
+        safeModulesVersion: SAFE_MODULES_VERSION,
+        status: 'token_balance_unavailable',
+        error: errorMessage(err),
+        hint: 'No se pudo leer saldo del token — verificá RPC Sepolia y la dirección MOCK USDt'
+      }
+    }
+
+    if (bal < amount) {
+      return {
+        dryRun: false,
+        txHash: null,
+        network,
+        address: await account.getAddress(),
+        usdt: fromBaseUnits(bal),
+        required: fromBaseUnits(amount),
+        safeModulesVersion: SAFE_MODULES_VERSION,
+        status: 'insufficient_token_balance',
+        hint:
+          network === 'sepolia'
+            ? `Fondeá MOCK USDt (${token}) en la smart account`
+            : 'Fondeá USDt mainnet en la EOA antes de dryRun:false'
+      }
+    }
+
     const result = await account.transfer({
-      token: tokenAddress('sepolia'),
-      recipient: params.to,
-      amount: toBaseUnits(params.amount)
+      token,
+      recipient,
+      amount
     })
 
     return {
       dryRun: false,
       txHash: result.hash,
       fee: fromBaseUnits(result.fee),
-      network: 'sepolia',
+      network,
+      mode: network === 'mainnet' ? 'eip-7702' : 'erc-4337',
       safeModulesVersion: SAFE_MODULES_VERSION,
       status: 'ok'
+    }
+  } catch (err) {
+    return {
+      dryRun: false,
+      txHash: null,
+      network,
+      safeModulesVersion: SAFE_MODULES_VERSION,
+      status: 'execute_failed',
+      error: errorMessage(err)
     }
   } finally {
     wallet.dispose()
