@@ -14,5 +14,7 @@ workspace/purchase-orders/*
 *.lock
 updater.lock
 .storage-demo/
+.storage-pear-ci/
+pear-stage/
 uploads/
 agent-tools/

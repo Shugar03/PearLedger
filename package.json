@@ -28,7 +28,8 @@
     "test": "npm run build:ts && node --test --test-concurrency=1 tests/**/*.test.js",
     "test:watch": "npm run build:ts && node --test --watch tests/**/*.test.js",
     "ota:updater": "bare bin.mjs --updater --update-window 0 --storage ./.storage-demo",
-    "ota:cli": "bare bin.mjs --update-window 0 --storage ./.storage-demo --json tools"
+    "ota:cli": "bare bin.mjs --update-window 0 --storage ./.storage-demo --json tools",
+    "pear:stage:prepare": "node scripts/prepare-pear-stage.mjs"
   },
   "dependencies": {
     "@qvac/sdk": "^0.17.1",
