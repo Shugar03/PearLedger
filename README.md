@@ -112,6 +112,16 @@ pearledger CLI (bin.mjs)
 
 Ver [`docs/ROADMAP.md`](docs/ROADMAP.md) para el plan hora a hora del hackathon.
 
+## Equipo y asignación
+
+| Persona | Principios | Área |
+|---------|------------|------|
+| **Sebastian** | P3, P4 | Pear P2P/OTA + harness/plugins |
+| **Antony** | P1, P2 | QVAC local + WDK gasless |
+| **Evelin** | UI | Frontend Electron (modo secundario) |
+
+Seguimiento interno: [`docs/TEAM.md`](docs/TEAM.md) · Contrato plugins: [`docs/PLUGIN_CONTRACT.md`](docs/PLUGIN_CONTRACT.md)
+
 ## Tracks y premios (Aleph 2026)
 
 | Track | Premio | Estado skeleton |
