@@ -15,7 +15,7 @@ export async function register(_h: Harness) {
       {
         name: 'get_wallet_balance',
         description: 'Saldo de wallet WDK (USDt + nativo)',
-        handler: async () => getWalletBalance()
+        handler: async (params: { network?: string }) => getWalletBalance(params)
       },
       {
         name: 'quote_payment',
@@ -31,6 +31,7 @@ export async function register(_h: Harness) {
           amount?: number
           dryRun?: boolean
           confirmed?: boolean
+          network?: string
         }) => executeGaslessPayment(params)
       }
     ],
