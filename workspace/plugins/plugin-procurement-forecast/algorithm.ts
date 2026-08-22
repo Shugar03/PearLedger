@@ -5,6 +5,7 @@
 
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { repoRoot } from '../../../harness/runtime.js'
 
 export interface InventoryItem {
   sku: string
@@ -30,7 +31,7 @@ export interface ForecastResult {
   daysHorizon: number
 }
 
-const INVENTORY_PATH = path.join(process.cwd(), 'workspace', 'inventory', 'stock.json')
+const INVENTORY_PATH = path.join(repoRoot(), 'workspace', 'inventory', 'stock.json')
 
 let cachedInventory: InventoryItem[] | null = null
 

@@ -1,6 +1,7 @@
 import { access, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
+import { repoRoot } from '../../../harness/runtime.js'
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.webp', '.gif'])
 
@@ -60,8 +61,8 @@ export async function resolveInvoiceImagePath(filePath: string): Promise<string>
 
   if (!MAX_EDGE || MAX_EDGE <= 0) return resolved
 
-  const abs = path.isAbsolute(resolved) ? resolved : path.join(process.cwd(), resolved)
-  const ocrDir = path.join(process.cwd(), 'workspace', 'invoices', '.ocr-cache')
+  const abs = path.isAbsolute(resolved) ? resolved : path.join(repoRoot(), resolved)
+  const ocrDir = path.join(repoRoot(), 'workspace', 'invoices', '.ocr-cache')
   await mkdir(ocrDir, { recursive: true })
   const cached = path.join(
     ocrDir,

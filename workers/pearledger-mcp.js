@@ -24,6 +24,10 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
+// Cursor MCP often ignores mcp.json `cwd`; pin process.cwd() to the repo root.
+if (process.cwd() !== root) {
+  process.chdir(root)
+}
 
 /** @type {Record<string, Record<string, z.ZodTypeAny>>} */
 export const TOOL_INPUT = {

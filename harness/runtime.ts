@@ -17,3 +17,13 @@ export function isDevRuntime(): boolean {
 export function harnessDir(): string {
   return path.dirname(fileURLToPath(import.meta.url))
 }
+
+/** Repo root. Works from source (harness/) and compiled (dist/harness/). */
+export function repoRoot(): string {
+  const dir = harnessDir()
+  // dist/harness → ../../ ; harness → ../
+  if (path.basename(path.dirname(dir)) === 'dist') {
+    return path.resolve(dir, '..', '..')
+  }
+  return path.resolve(dir, '..')
+}

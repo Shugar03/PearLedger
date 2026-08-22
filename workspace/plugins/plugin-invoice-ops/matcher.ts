@@ -8,11 +8,12 @@
 import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { ragIngest, ragSearch } from '@qvac/sdk'
+import { repoRoot } from '../../../harness/runtime.js'
 import { getEmbeddingModelId } from './qvac-client.js'
 import type { Invoice } from './schema.js'
 
 const WORKSPACE = 'purchase-orders'
-const PO_DIR = path.join(process.cwd(), 'workspace', 'purchase-orders')
+const PO_DIR = path.join(repoRoot(), 'workspace', 'purchase-orders')
 const MATCH_THRESHOLD = 0.55
 
 /** Similitud mínima de proveedor para siquiera proponer una PO. */
