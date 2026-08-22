@@ -1,0 +1,11 @@
+{
+  "ctxSize": 4096,
+  "models": {
+    "llm": "models/qwen3-1.7b-q4_0.bin",
+    "ocr": "models/ocr-3b-multimodal-q4_0.bin",
+    "embeddings": "models/gte-large-fp16.bin"
+  },
+  "workspaces": {
+    "purchase-orders": "workspace/purchase-orders"
+  }
+}

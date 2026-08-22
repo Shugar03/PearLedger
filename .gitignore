@@ -1,0 +1,17 @@
+node_modules/
+out/
+dist/
+.env
+*.log
+models/*.bin
+models/*.gguf
+models/*.onnx
+workspace/invoices/*
+!workspace/invoices/.gitkeep
+workspace/purchase-orders/*
+!workspace/purchase-orders/.gitkeep
+.DS_Store
+*.lock
+updater.lock
+uploads/
+agent-tools/
