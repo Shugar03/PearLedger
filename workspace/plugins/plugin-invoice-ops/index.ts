@@ -19,7 +19,11 @@ export async function register() {
         handler: async ({ filePath }: { filePath?: string }) => {
           if (!filePath) throw new Error('filePath required')
           const rawText = await ocrInvoice(filePath)
-          return parseInvoiceSchema(rawText)
+          const invoice = await parseInvoiceSchema(rawText)
+          return {
+            invoice,
+            rawTextPreview: rawText.slice(0, 500)
+          }
         }
       },
       {

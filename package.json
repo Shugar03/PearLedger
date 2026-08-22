@@ -22,6 +22,7 @@
     "make:win32-arm64": "bare-build --name pearledger --standalone --host win32-arm64 --out ./out/win32-arm64 bin.mjs",
     "make:win32-x64": "bare-build --name pearledger --standalone --host win32-x64 --out ./out/win32-x64 bin.mjs",
     "models:download": "node scripts/download-models.mjs",
+    "test:block-3-8": "npm run build:ts && node --env-file=.env scripts/test-block-3-8.mjs",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
