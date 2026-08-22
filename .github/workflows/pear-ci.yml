@@ -61,20 +61,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Stage with pear-ci (requires PEAR_PRIMARY_KEY)
-        if: ${{ secrets.PEAR_PRIMARY_KEY != '' }}
+      - name: Stage with pear-ci
         uses: holepunchto/actions/pear-ci@main
         with:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           namespace: pearledger
           target: .
           dry-run: true
-
-      - name: Skip stage (secret missing)
-        if: ${{ secrets.PEAR_PRIMARY_KEY == '' }}
-        run: |
-          echo "::warning::PEAR_PRIMARY_KEY not set — skipping pear-ci stage"
-          echo "Add repository secret PEAR_PRIMARY_KEY (openssl rand -hex 32)"
 
       - name: Verify upgrade link
         run: |
