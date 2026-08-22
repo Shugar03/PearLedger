@@ -340,7 +340,7 @@ async function matchFromFilesystem(
     } else if (invoiceId && po.purchaseOrderId.includes(invoiceId)) {
       score = 0.5
     }
-    if (score > bestScore) {
+    if (!best || score > bestScore) {
       bestScore = score
       best = po
     }
