@@ -13,7 +13,7 @@
 | **P2** | Cero comisiones nativas (Gasless) — USDt vía Pimlico/Candide (7702 mainnet) o ERC-4337 Sepolia | **Antony** | WDK MCP ($1,000) + Gasless ($500) |
 | **P3** | Distribución soberana (P2P) — Bare + Pear `variant/daemon`, `pear://<key>`, OTA P2P | **Sebastian** | Pear ($1,500) |
 | **P4** | Arquitectura extensible — mini-harness + plugins (filosofía Cordis, sin dependencia) | **Sebastian** | QVAC Pipeline + base integración |
-| **UI** | Modo secundario Electron / dashboard Bento (opcional demo) | **Evelin** | Presentación demo / jurado |
+| **UI** | Capa humana — dashboard operativo (Electron secundario, mismo harness) | **Evelin** | Narrativa producto + demo jurado |
 
 ---
 
@@ -23,7 +23,7 @@
 |---------|-----|------------|---------------|
 | **Sebastian Villarreal Paz** | Infra Pear + Orquestador | P3, P4 | `feat/p3-pear-ota`, `feat/p4-harness` |
 | **Antony** | IA local + Pagos gasless | P1, P2 | `feat/qvac-invoice-ops`, `feat/wdk-settlement` |
-| **Evelin** | Frontend / UI demo | UI (Electron opcional) | `feat/ui-electron` |
+| **Evelin** | Frontend / UX operativo | UI (Electron) | `feat/ui-electron` |
 
 ---
 
@@ -78,18 +78,156 @@
 
 ---
 
-### Evelin — Frontend (modo secundario)
+### Evelin — Frontend / UX (capa humana)
+
+> **Nota de producto (UX senior):** CLI-first es correcto para P3/P4, hackathon y operación agéntica.  
+> **Pero** un gerente de contabilidad o tesorero **no usará la consola** en el día a día.  
+> La UI no es “nice to have”: es la capa que hace **creíble y usable** la visión del manifiesto para usuarios de negocio.  
+> En el hackathon: CLI demuestra tracks técnicos; **UI cierra la historia** (“el tesorero aprueba con un clic”).
+
+#### Por qué CLI + UI (no uno u otro)
+
+| Dimensión | CLI (modo técnico) | UI (modo humano) |
+|-----------|-------------------|------------------|
+| **Usuario** | Dev, integrador, agente autónomo, jurado técnico | Gerente financiero, contador, tesorero |
+| **Para qué** | Pear P2P, OTA, MCP, scripts, demo tracks | Revisar, aprobar, auditar, confiar |
+| **Mental model** | “Ejecuto una operación” | “Veo estado → decido → confirmo” |
+| **Barrera** | Baja para builders | **Alta** para contabilidad sin perfil técnico |
+
+#### Arquitectura de capas (Evelin no duplica lógica)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  CAPA HUMANA — Evelin (ui/ o electron/)                  │
+│  Inbox · KPI tesorería · Aprobar pagos · Preview OCR    │
+└───────────────────────┬─────────────────────────────────┘
+                        │ IPC / harness.execute() / eventos
+┌───────────────────────▼─────────────────────────────────┐
+│  CAPA AGENTE — Sebastian (harness/ P4)                  │
+│  Orquestador · hooks · confirmación humana >$1k           │
+└───────────────────────┬─────────────────────────────────┘
+                        │
+┌───────────────────────▼─────────────────────────────────┐
+│  CAPA INFRA — Sebastian (Pear/Bare P3)                  │
+│  pear:// · OTA · local-first                              │
+└─────────────────────────────────────────────────────────┘
+         ↑ Antony implementa handlers en plugins (P1/P2)
+```
+
+- **Contador / gerente** → UI  
+- **Agente + integraciones (MCP, scripts)** → CLI  
+- **Hackathon / jurado** → CLI en video (QVAC, WDK, Pear) + **30–60 s UI al cierre**
+
+#### Archivos y alcance
 
 | Archivo / carpeta | Responsabilidad |
 |-------------------|-----------------|
-| `ui/` o `electron/` *(a crear)* | Dashboard Bento, sidebar, KPI cards |
-| Paleta manifiesto | `#C4F53C` accent, `#F3F4F6` canvas, Inter/Plus Jakarta |
-| Integración | Consumir mismos comandos/API del harness vía IPC o spawn CLI |
+| `ui/` o `electron/` *(a crear)* | App Electron + dashboard Bento |
+| `ui/src/screens/` | Pantallas (ver MVP abajo) |
+| `ui/src/components/` | Cards, sidebar, badges, modales |
+| `ui/src/ipc/` o `ui/src/api/` | Puente a harness — **sin lógica OCR/pagos** |
 
-**Reglas UI:** modo secundario — el **modo primario es CLI**. La demo de 3 min puede mostrar 30 s de UI al final.  
-**No duplicar lógica:** OCR, pagos y forecast viven en plugins; la UI solo visualiza resultados.
+**Reglas estrictas:**
+- **No duplicar lógica:** OCR, RAG, pagos y forecast viven en plugins (Antony). La UI solo invoca y visualiza.
+- **No tocar:** `app.js`, `harness/core.ts`, `bin.mjs`, plugins de Antony.
+- **Lenguaje de negocio en UI:** “Proveedor”, “Aprobar pago” — nunca `execute_gasless_payment` visible al usuario.
+- **Modo secundario en arquitectura**, pero **must-have en narrativa de producto** para demo y usuarios reales.
 
-**Coordinación con Sebastian:** acordar contrato IPC/eventos antes de implementar pantallas.
+#### MVP de UI (suficiente para hackathon + creíble para contabilidad)
+
+No construir un ERP. Es un **dashboard de operaciones** (Bento del manifiesto):
+
+| # | Pantalla | Propósito | Tool / dato del harness |
+|---|----------|-----------|-------------------------|
+| 1 | **Inbox** | Facturas PDF (drag & drop); estados: pendiente → parseada → conciliada → pagada | `parse_invoice`, `match_purchase_order` |
+| 2 | **Detalle factura** | Preview PDF + campos OCR; discrepancias 3-way match; badge confianza | Resultado de plugins invoice-ops |
+| 3 | **Pay queue** | Pagos propuestos por el agente; aprobar / rechazar (especialmente >$1k) | `quote_payment`, `execute_gasless_payment` + hook confirmación |
+| 4 | **Forecast** | Cards SKU en riesgo de quiebre; propuesta de pedido | `run_usage_forecast`, `draft_purchase_order` |
+| 5 | **Wallet** | Saldo USDt, última tx; **fee $0.00 visible** (refuerza P2 gasless) | `get_wallet_balance` |
+
+**Priorización:**
+
+| Nivel | Entregable |
+|-------|------------|
+| **Must (hackathon)** | Inbox + detalle factura + modal aprobar pago + clip 30–60 s en video |
+| **Should** | Forecast cards + wallet |
+| **Could (post-hackathon)** | Settings, multi-usuario, historial completo |
+
+#### Principios UX (persona: tesorería / contabilidad)
+
+1. **Confianza antes que velocidad** — Mostrar badge: “100% local · ningún byte salió del dispositivo” (P1).
+2. **Confirmación explícita** — Reemplazar `[y/N]` de terminal por modal con monto, vendor y factura vinculada (> $1,000 USDt).
+3. **Estados claros** — El usuario no ve “plugins”; ve flujos: *Recibida → Validada → Pagada*.
+4. **Trazabilidad** — Quién aprobó, cuándo, hash/ID de factura asociada al pago.
+5. **Errores en lenguaje humano** — No stack traces; mensajes accionables (“Revisar factura”, “Reintentar pago”).
+
+#### Sistema de diseño (manifiesto — usar tal cual)
+
+**Layout Bento (referencia):**
+
+```
++-------------------+----------------------------------------+
+|  [Sidebar]        |  [Pill Header & Status]   [Avatar]    |
+|  - Inbox          |  +-----------+ +-----------+           |
+|  - Pay            |  | KPI Card  | | KPI Card  |  (Bento)  |
+|  - Forecast       |  +-----------+ +-----------+           |
+|  - Settings       |  +----------------------+ +--------+  |
+|                   |  | OCR Invoice (LIME)   | | Wallet |  |
+|                   |  +----------------------+ +--------+  |
++-------------------+----------------------------------------+
+```
+
+**Paleta:**
+
+| Rol | HEX | Uso |
+|-----|-----|-----|
+| Canvas | `#F3F4F6` / `#F8F9FA` | Fondo base |
+| Surface (cards) | `#FFFFFF` | Cards con borde `#E5E7EB` 1px |
+| Primary accent | `#C4F53C` / `#CCFF00` | Badges gasless, toggles, KPIs, banner OTA en terminal |
+| Text primary | `#111315` / `#18181B` | Títulos, botones |
+| Text muted | `#6B7280` / `#9CA3AF` | Subtítulos, ejes |
+
+**Tipografía:** Inter o Plus Jakarta Sans · **Radius:** `rounded-2xl` / `rounded-3xl` (16–24px) · **Badges:** `rounded-full` (pills).
+
+#### Contrato UI ↔ harness (coordinar con Sebastian)
+
+Evelin **no espera** a que P3/P4 estén 100% — puede arrancar con **mocks** y conectar cuando Sebastian cablee el harness.
+
+**Fase 1 — Mocks (bloque 0–8h):** UI con datos estáticos / JSON de ejemplo en `workspace/purchase-orders/`.
+
+**Fase 2 — Integración (bloque 8–18h):** IPC Electron → backend que llama `harness.execute(tool, params)`.
+
+Eventos útiles del harness (P4 — Sebastian los expone):
+
+| Evento | Cuándo | Uso en UI |
+|--------|--------|-----------|
+| `tool:executing` | Antes del handler | Loading / spinner |
+| `tool:done` | Handler OK | Actualizar pantalla con resultado |
+| `tool:blocked` | Hook rechazó (ej. >$1k sin confirmar) | Abrir modal de confirmación |
+| `tool:registered` | Plugin cargado | Debug / estado “agente listo” |
+
+**Acciones UI → tools (mapeo):**
+
+| Acción usuario | Tool |
+|----------------|------|
+| Subir / seleccionar PDF | `parse_invoice` → `match_purchase_order` |
+| Ver inventario / forecast | `run_usage_forecast` |
+| Aprobar pago | `execute_gasless_payment` con `{ confirmed: true }` |
+| Ver saldo | `get_wallet_balance` |
+
+Detalle técnico: [`PLUGIN_CONTRACT.md`](./PLUGIN_CONTRACT.md).
+
+#### Checklist Evelin (24h)
+
+| Bloque | Tarea | Estado |
+|--------|-------|--------|
+| 0–3h | Scaffold `ui/` o `electron/` + paleta/tokens CSS | [ ] |
+| 3–8h | Wireframes Bento + Inbox + detalle factura (mock) | [ ] |
+| 8–12h | Pay queue + modal confirmación >$1k | [ ] |
+| 12–18h | Conectar IPC a harness (resultados reales) | [ ] |
+| 18–24h | Pulido visual + clip 30–60 s para video | [ ] |
+
+**Coordinación:** ping a Sebastian cuando necesites un endpoint IPC o evento nuevo en el harness — no improvisar llamadas directas a QVAC/WDK desde la UI.
 
 ---
 
@@ -188,7 +326,7 @@ Marcar `[x]` al completar. Actualizar fecha en el commit o comentario de PR.
 | 0:30–1:15 | Track QVAC — `ingest` local | Antony (CLI) |
 | 1:15–2:00 | Track WDK — `pay` gasless | Antony (CLI) |
 | 2:00–2:30 | Track Pear — OTA + `pear install` | Sebastian |
-| 2:30–3:00 | Cierre + permalinks (+ UI 30 s opcional) | Sebastian + Evelin |
+| 2:30–3:00 | Cierre + permalinks + **UI 30–60 s** (“tesorero aprueba con un clic”) | Sebastian + Evelin |
 
 ---
 
@@ -213,4 +351,4 @@ Marcar `[x]` al completar. Actualizar fecha en el commit o comentario de PR.
 
 ---
 
-*Última actualización: 2026-08-22 · Mantenedor: Sebastian*
+*Última actualización: 2026-08-22 · Mantenedor: Sebastian · Guía UX/UI Evelin: sección “Frontend / UX”*
