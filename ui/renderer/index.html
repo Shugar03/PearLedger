@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PearLedger</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">🍐 PearLedger</div>
+        <p class="badge-local">100% local · sin cloud</p>
+        <nav>
+          <button type="button" class="nav active" data-view="inbox">Inbox</button>
+          <button type="button" class="nav" data-view="pay">Pagos</button>
+          <button type="button" class="nav" data-view="forecast">Forecast</button>
+          <button type="button" class="nav" data-view="wallet">Wallet</button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="header">
+          <h1 id="view-title">Inbox de facturas</h1>
+          <span id="status-pill" class="pill">Listo</span>
+        </header>
+
+        <section id="view-inbox" class="view active">
+          <div class="card bento-wide">
+            <h2>Facturas PDF</h2>
+            <p class="muted">Arrastrá o elegí un PDF. Ejecuta OCR local + conciliación vía harness.</p>
+            <div class="actions">
+              <button type="button" id="btn-pick-pdf" class="btn primary">Elegir PDF</button>
+              <button type="button" id="btn-ingest" class="btn" disabled>Procesar factura</button>
+            </div>
+            <p id="inbox-file" class="file-path"></p>
+            <pre id="inbox-result" class="result"></pre>
+          </div>
+        </section>
+
+        <section id="view-pay" class="view">
+          <div class="card">
+            <h2>Cola de pagos</h2>
+            <form id="pay-form" class="form-grid">
+              <label>
+                Proveedor (0x…)
+                <input id="pay-vendor" placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" />
+              </label>
+              <label>
+                Monto USDt
+                <input id="pay-amount" type="number" min="0" step="0.01" value="250" />
+              </label>
+            </form>
+            <div class="actions">
+              <button type="button" id="btn-quote" class="btn">Cotizar</button>
+              <button type="button" id="btn-pay-dry" class="btn primary">Aprobar (dry-run)</button>
+            </div>
+            <pre id="pay-result" class="result"></pre>
+          </div>
+        </section>
+
+        <section id="view-forecast" class="view">
+          <div class="card">
+            <h2>Proyección de stock</h2>
+            <label>
+              SKU (opcional)
+              <input id="forecast-sku" placeholder="SKU-001" />
+            </label>
+            <div class="actions">
+              <button type="button" id="btn-forecast" class="btn primary">Ejecutar forecast</button>
+            </div>
+            <pre id="forecast-result" class="result"></pre>
+          </div>
+        </section>
+
+        <section id="view-wallet" class="view">
+          <div class="cards-row">
+            <div class="card kpi">
+              <h3>Saldo USDt</h3>
+              <p id="wallet-usdt" class="kpi-value">—</p>
+              <p class="muted">Fee gasless: $0.00</p>
+            </div>
+            <div class="card kpi">
+              <h3>Red</h3>
+              <p id="wallet-network" class="kpi-value">—</p>
+            </div>
+          </div>
+          <button type="button" id="btn-balance" class="btn primary">Actualizar saldo</button>
+          <pre id="wallet-result" class="result"></pre>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

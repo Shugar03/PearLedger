@@ -100,7 +100,7 @@ npm run dev -- ingest ./factura.pdf --json
 
 ## IPC bridge (Evelin)
 
-[`harness/ipc-bridge.ts`](../harness/ipc-bridge.ts):
+[`harness/ipc-bridge.ts`](../harness/ipc-bridge.ts) — importar desde Electron main o tests Node:
 
 ```typescript
 import { executeTool, listTools, onHarnessEvent, ensureHarnessReady } from './harness/ipc-bridge.js'
@@ -109,6 +109,10 @@ await ensureHarnessReady()
 const result = await executeTool('parse_invoice', { filePath: '/path/to.pdf' })
 onHarnessEvent('tool:done', (tool, result) => { /* update UI */ })
 ```
+
+**UI scaffold:** `ui/` — `npm run ui:dev` expone `window.pear.execute()` vía preload.
+
+Guía equipo: [`docs/PHASE-B-INTEGRATION.md`](./PHASE-B-INTEGRATION.md).
 
 ---
 

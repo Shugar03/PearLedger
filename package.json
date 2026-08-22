@@ -29,7 +29,10 @@
     "test:watch": "npm run build:ts && node --test --watch tests/**/*.test.js",
     "ota:updater": "bare bin.mjs --updater --update-window 0 --storage ./.storage-demo",
     "ota:cli": "bare bin.mjs --update-window 0 --storage ./.storage-demo --json tools",
-    "pear:stage:prepare": "node scripts/prepare-pear-stage.mjs"
+    "pear:stage:prepare": "node scripts/prepare-pear-stage.mjs",
+    "ui:install": "npm install --prefix ui",
+    "ui:dev": "npm run build:ts && npm run ui:install && npm run dev --prefix ui",
+    "smoke:team": "npm test && npm run dev -- tools --json"
   },
   "dependencies": {
     "@qvac/sdk": "^0.17.1",
