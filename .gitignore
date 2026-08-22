@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.local
+*.log
+models/*.bin
+models/*.gguf
+models/*.onnx
+models/**/*.onnx
+workspace/invoices/*.pdf
+workspace/purchase-orders/*.json
+.storage/
+corestore/
+.DS_Store
+dist/
+*.pear

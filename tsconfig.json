@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": true,
+    "resolveJsonModule": true,
+    "allowJs": true
+  },
+  "include": [
+    "harness/**/*.ts",
+    "workspace/plugins/**/*.ts",
+    "qvac.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

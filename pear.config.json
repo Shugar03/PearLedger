@@ -1,0 +1,6 @@
+{
+  "name": "pearledger",
+  "channel": "alpha",
+  "key": "REPLACE_AFTER_PEAR_TOUCH",
+  "description": "Agente local de operaciones financieras, tesorería y logística P2P"
+}

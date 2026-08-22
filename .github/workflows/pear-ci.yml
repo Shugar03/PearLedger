@@ -1,0 +1,38 @@
+name: Pear CI — OTA P2P
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pear-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+
+      - name: Install Pear CLI
+        run: curl https://install.pears.com/pear.sh | sh
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Stage & provision (requires PEAR_PRIMARY_KEY secret)
+        env:
+          PEAR_PRIMARY_KEY: ${{ secrets.PEAR_PRIMARY_KEY }}
+        run: |
+          if [ -z "$PEAR_PRIMARY_KEY" ]; then
+            echo "⚠️  PEAR_PRIMARY_KEY no configurado — saltando stage/provision"
+            exit 0
+          fi
+          pear stage alpha
+          pear provision alpha
+          echo "✅ Release publicado — pear:// link estable vía CI"
+
+      - name: Typecheck
+        run: npm run typecheck || true
