@@ -6,13 +6,15 @@ import {
   loadModel,
   OCR_3B_MULTIMODAL_Q4_0,
   MMPROJ_OCR_3B_MULTIMODAL_F16,
-  QWEN3_1_7B_INST_Q4
+  QWEN3_1_7B_INST_Q4,
+  GTE_LARGE_FP16
 } from '@qvac/sdk'
 
 const CTX_SIZE = Number(process.env.QVAC_CTX_SIZE || 4096)
 
 let ocrModelId: string | null = null
 let llmModelId: string | null = null
+let embeddingModelId: string | null = null
 
 export async function getOcrModelId(): Promise<string> {
   if (ocrModelId) return ocrModelId
@@ -35,4 +37,14 @@ export async function getLlmModelId(): Promise<string> {
     modelConfig: { ctx_size: CTX_SIZE }
   })
   return llmModelId
+}
+
+export async function getEmbeddingModelId(): Promise<string> {
+  if (embeddingModelId) return embeddingModelId
+
+  embeddingModelId = await loadModel(
+    { modelSrc: GTE_LARGE_FP16 },
+    { timeout: 180_000 }
+  )
+  return embeddingModelId
 }
