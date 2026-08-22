@@ -65,9 +65,19 @@ function normalize(text: string | null | undefined): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9.\s$-]/g, ' ')
+    // Drop punctuation so "S.A." ≈ "SA" for vendor matching
+    .replace(/[^a-z0-9\s$-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Soft vendor equality — ignores dots/spacing noise from OCR. */
+function vendorsMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  const na = normalize(a).replace(/\s+/g, '')
+  const nb = normalize(b).replace(/\s+/g, '')
+  if (!na || !nb) return false
+  if (na === nb) return true
+  return na.includes(nb) || nb.includes(na)
 }
 
 /** Sufijos societarios y conectores que no aportan señal al comparar proveedores. */
@@ -113,6 +123,8 @@ function tokenAffinity(a: string, b: string): number {
 }
 
 export function vendorSimilarity(a: string | null | undefined, b: string | null | undefined): number {
+  if (vendorsMatch(a, b)) return 1
+
   const left = vendorTokens(a)
   const right = vendorTokens(b)
   if (!left.length || !right.length) return 0
@@ -452,7 +464,7 @@ async function matchFromFilesystem(
       score = 0.5
     }
 
-    if (score > bestScore) {
+    if (!best || score > bestScore) {
       bestScore = score
       bestVendorSim = vendorSim
       best = po

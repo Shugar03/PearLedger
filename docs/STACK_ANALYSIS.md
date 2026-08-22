@@ -58,7 +58,8 @@ Documento de referencia para el equipo de hackathon. Resume investigación de do
 - Paymaster: `0x8888888888888888888888888888888888882402`
 
 **Sepolia — ERC-4337 (`wdk-wallet-evm-erc-4337`):**
-- EntryPoint v0.7 + MOCK USDt: `0xd077a40066800590F633c0000900f7F6cD0A10dB`
+- EntryPoint v0.7 + MOCK USDt: `0xd077A400968890Eacc75cdc901F0356c943e4fDb`
+  (live pay: `docs/WDK-SEPOLIA-LIVE-PAY.md`)
 
 **Factibilidad:** ⚠️ Media-Alta. Sepolia es straightforward. Mainnet requiere API key + fondos USDt reales para demo.
 

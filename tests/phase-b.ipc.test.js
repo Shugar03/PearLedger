@@ -14,6 +14,7 @@ import {
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const fixturePng = path.join(root, 'tests/fixtures/invoice-demo.png')
+const samplePng = path.join(root, 'workspace/invoices/sample.png')
 
 describe('Fase B — contrato IPC (Evelin)', () => {
   before(async () => {
@@ -41,14 +42,27 @@ describe('Fase B — contrato IPC (Evelin)', () => {
       t.skip('OCR/LLM integration omitido en CI (sin modelos QVAC)')
       return
     }
-    if (!fs.existsSync(fixturePng)) {
-      t.skip('fixture tests/fixtures/invoice-demo.png ausente')
+
+    const filePath = fs.existsSync(fixturePng)
+      ? fixturePng
+      : fs.existsSync(samplePng)
+        ? samplePng
+        : null
+
+    if (!filePath) {
+      t.skip('fixture invoice PNG ausente')
       return
     }
+
     try {
-      const result = await executeTool('parse_invoice', { filePath: fixturePng })
+      const result = await executeTool('parse_invoice', { filePath })
       assert.ok(result !== null && typeof result === 'object')
-      assert.ok('vendor' in result)
+      // Contrato Antony: { invoice, rawTextPreview? } o invoice plano
+      assert.ok(
+        'invoice' in result ||
+          'invoiceNumber' in result ||
+          'vendor' in result
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       t.skip(`OCR/LLM requiere modelos QVAC: ${message}`)
@@ -62,7 +76,7 @@ describe('Fase B — contrato IPC (Evelin)', () => {
 
   it('execute_gasless_payment dry-run para cola de pagos', async () => {
     const result = await executeTool('execute_gasless_payment', {
-      to: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      to: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
       amount: 250,
       dryRun: true
     })

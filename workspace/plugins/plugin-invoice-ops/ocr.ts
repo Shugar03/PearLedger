@@ -1,13 +1,18 @@
 /**
  * QVAC OCR wrapper — Path B (OCR_3B_MULTIMODAL_Q4_0) para facturas reales.
- * Fallback Path A (OCR_LATIN) solo si el error es recuperable (p.ej. ctx overflow).
- * Si el worker Bare crashea, NO se intenta LATIN en el mismo proceso.
+ * Fallback Path A (OCR_LATIN) si el worker multimodal aborta o se pasa de presupuesto.
+ * En Windows, Path A primero (Path B suele SIGABRT / ACCESS_VIOLATION).
+ * Override: QVAC_OCR_PATH=latin|multimodal|auto
  *
  * Permalink jurado QVAC: workspace/plugins/plugin-invoice-ops/ocr.ts
  */
 
 import { cancel, completion, loadModel, ocr, OCR_LATIN, unloadModel } from '@qvac/sdk'
-import { getOcrModelId, resetQvacModelCache } from './qvac-client.js'
+import {
+  clearStaleWorkerLock,
+  getOcrModelId,
+  resetQvacRuntime
+} from './qvac-client.js'
 import { resolveInvoiceImagePath } from './image-input.js'
 
 const CTX_SIZE = Number(process.env.QVAC_CTX_SIZE || 4096)
@@ -17,10 +22,23 @@ const PATH_B_BUDGET_MS = Number(process.env.QVAC_OCR_PATH_B_TIMEOUT_MS || 45_000
 
 class PathBTimeoutError extends Error {}
 
-function isFatalWorkerError(message: string): boolean {
-  return /Bare worker exited|3221225477|ACCESS_VIOLATION|ggml_gallocr|Failed to load vision model|Failed to load model/i.test(
-    message
-  )
+type OcrPath = 'auto' | 'latin' | 'multimodal'
+
+function resolveOcrPath(): OcrPath {
+  const raw = (process.env.QVAC_OCR_PATH || 'auto').toLowerCase()
+  if (raw === 'latin' || raw === 'multimodal' || raw === 'auto') return raw
+  return 'auto'
+}
+
+function preferLatinFirst(): boolean {
+  const mode = resolveOcrPath()
+  if (mode === 'latin') return true
+  if (mode === 'multimodal') return false
+  return process.platform === 'win32'
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function ocrWithMultimodal(imagePath: string): Promise<string> {
@@ -55,6 +73,7 @@ async function ocrWithMultimodal(imagePath: string): Promise<string> {
 }
 
 async function ocrWithLatinPipeline(imagePath: string): Promise<string> {
+  clearStaleWorkerLock()
   const modelId = await loadModel({ modelSrc: OCR_LATIN })
   try {
     const { blocks } = ocr({ modelId, image: imagePath })
@@ -63,8 +82,28 @@ async function ocrWithLatinPipeline(imagePath: string): Promise<string> {
     console.log(`[ocr] Path A — ${result.length} bloques, ${text.length} chars`)
     return text
   } finally {
-    await unloadModel({ modelId })
+    try {
+      await unloadModel({ modelId })
+    } catch {
+      // ignore unload errors after crash paths
+    }
   }
+}
+
+async function ocrWithLatinRetry(imagePath: string, attempts = 3): Promise<string> {
+  let lastError: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await resetQvacRuntime()
+      await sleep(350 * (i + 1))
+      return await ocrWithLatinPipeline(imagePath)
+    } catch (err) {
+      lastError = err
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(`[ocr] OCR_LATIN attempt ${i + 1}/${attempts} failed: ${message}`)
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
 export async function ocrInvoice(filePath: string): Promise<string> {
@@ -73,27 +112,38 @@ export async function ocrInvoice(filePath: string): Promise<string> {
     `[ocr] ctx_size=${CTX_SIZE}, path_b_budget=${PATH_B_BUDGET_MS}ms, image=${imagePath}`
   )
 
+  clearStaleWorkerLock()
+
   let text = ''
   const startedAt = Date.now()
-  try {
-    console.log('[ocr] Path B — OCR_3B_MULTIMODAL_Q4_0 + mmproj Q8')
-    text = await ocrWithMultimodal(imagePath)
-    console.log(`[ocr] Path B ok en ${Date.now() - startedAt}ms, ${text.length} chars`)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (isFatalWorkerError(message)) {
-      resetQvacModelCache()
+
+  if (preferLatinFirst()) {
+    console.log('[ocr] Path A — OCR_LATIN (preferred on this platform)')
+    try {
+      text = await ocrWithLatinRetry(imagePath)
+    } catch (latinErr) {
+      if (resolveOcrPath() === 'latin') throw latinErr
       console.warn(
-        `[ocr] Path B fatal (${message}) — sin fallback LATIN (reiniciar proceso / reintentar)`
+        `[ocr] Path A failed (${latinErr instanceof Error ? latinErr.message : latinErr}) — try OCR_3B`
       )
-      throw new Error(
-        `OCR Path B fatal: ${message}. Reintentá en un proceso limpio (no usar OCR_LATIN tras crash de worker).`
-      )
+      await resetQvacRuntime()
+      await sleep(300)
+      text = await ocrWithMultimodal(imagePath)
     }
-    console.warn(
-      `[ocr] Path B descartado tras ${Date.now() - startedAt}ms (${message}) — fallback OCR_LATIN`
-    )
-    text = await ocrWithLatinPipeline(imagePath)
+  } else {
+    try {
+      console.log('[ocr] Path B — OCR_3B_MULTIMODAL_Q4_0 + mmproj Q8')
+      text = await ocrWithMultimodal(imagePath)
+      console.log(`[ocr] Path B ok en ${Date.now() - startedAt}ms, ${text.length} chars`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(
+        `[ocr] Path B descartado tras ${Date.now() - startedAt}ms (${message}) — fallback OCR_LATIN`
+      )
+      await resetQvacRuntime()
+      await sleep(400)
+      text = await ocrWithLatinRetry(imagePath)
+    }
   }
 
   if (!text) {

@@ -34,7 +34,7 @@ describe('Loader (integración)', () => {
 
   it('H-08: execute_gasless_payment dry-run bajo umbral', async () => {
     const result = await harness.execute('execute_gasless_payment', {
-      to: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      to: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
       amount: 250,
       dryRun: true
     })

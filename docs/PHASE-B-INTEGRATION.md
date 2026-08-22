@@ -39,7 +39,7 @@ npm run models:download       # cuando QVAC esté listo
 npm run dev -- tools --json
 npm run dev -- ingest ./test.pdf
 npm run dev -- forecast --sku SKU-001
-npm run dev -- pay --vendor 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb --amount 250
+npm run dev -- pay --vendor 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --amount 250
 npm run dev -- balance
 ```
 
