@@ -98,8 +98,8 @@ window.pear.onEvent(({ type, tool, result }) => { /* ... */ })
 
 ## Checklist integración E2E
 
-- [ ] Antony: `parse_invoice` retorna JSON usable por UI
-- [ ] Antony: `pay` dry-run OK en Sepolia/mainnet stub
+- [ ] Antony: `parse_invoice` retorna JSON usable por UI *(requiere `npm run models:download`)*
+- [x] Antony: `pay` dry-run OK en Sepolia/mainnet stub *(código en main; smoke CLI OK)*
 - [ ] Evelin: Inbox procesa PDF real vía `window.pear.execute`
-- [ ] Evelin: Modal confirmación >$1k con `confirmed: true`
+- [x] Evelin: Modal confirmación >$1k con `confirmed: true` *(scaffold en `ui/`)*
 - [ ] Demo: CLI (jurado técnico) + UI 30–60 s (jurado producto)

@@ -59,6 +59,19 @@
           </div>
         </section>
 
+        <dialog id="confirm-modal" class="confirm-modal">
+          <form method="dialog" class="confirm-card">
+            <h2>Confirmación requerida</h2>
+            <p id="confirm-message" class="muted">
+              Este pago supera el umbral de $1,000 USDt. ¿Confirmás la ejecución?
+            </p>
+            <div class="actions">
+              <button type="submit" value="cancel" class="btn">Cancelar</button>
+              <button type="submit" value="confirm" class="btn primary">Confirmar pago</button>
+            </div>
+          </form>
+        </dialog>
+
         <section id="view-forecast" class="view">
           <div class="card">
             <h2>Proyección de stock</h2>
