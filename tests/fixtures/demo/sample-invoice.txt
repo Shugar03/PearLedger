@@ -1,0 +1,17 @@
+INVOICE
+
+Invoice number: INV-001
+Vendor: Proveedor Demo S.A.
+Date: 2026-08-22
+PO Reference: PO-2026-001
+Currency: USD
+
+Line items:
+Description              Qty    Unit Price    Total
+Material de oficina        1        100.00   100.00
+
+Subtotal: 100.00
+Tax: 0.00
+Total: 100.00 USD
+
+Status: pending payment
