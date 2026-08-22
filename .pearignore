@@ -1,9 +1,13 @@
 node_modules
 .git
+.git/**
 out
 dist
 .storage-demo
+.storage-pear-ci
 vendor
 *.log
 .env
 .cursor
+tests
+tool-*.json

@@ -5,7 +5,7 @@
   "productName": "pearledger",
   "private": false,
   "bin": "bin.mjs",
-  "upgrade": "pear://48oa46fuax77q7973h33kuj5ywp1m9obw71fcu78rhptisjs3hoy",
+  "upgrade": "pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o",
   "type": "module",
   "engines": {
     "node": ">=22.17"
