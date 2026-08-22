@@ -5,15 +5,17 @@
   "productName": "pearledger",
   "private": false,
   "bin": "bin.mjs",
-  "upgrade": "pear://<YOUR_KEY_HERE>",
+  "upgrade": "pear://48oa46fuax77q7973h33kuj5ywp1m9obw71fcu78rhptisjs3hoy",
   "type": "module",
   "engines": {
     "node": ">=22.17"
   },
   "scripts": {
     "start": "bare bin.mjs --no-updates",
-    "dev": "node --experimental-strip-types bin.mjs --no-updates",
+    "predev": "npm run build:ts",
+    "dev": "node cli/dev.mjs",
     "build:ts": "tsc",
+    "prestart": "npm run build:ts",
     "make": "node scripts/make.js",
     "make:darwin-arm64": "bare-build --name pearledger --standalone --host darwin-arm64 --out ./out/darwin-arm64 bin.mjs",
     "make:darwin-x64": "bare-build --name pearledger --standalone --host darwin-x64 --out ./out/darwin-x64 bin.mjs",
@@ -22,7 +24,11 @@
     "make:win32-arm64": "bare-build --name pearledger --standalone --host win32-arm64 --out ./out/win32-arm64 bin.mjs",
     "make:win32-x64": "bare-build --name pearledger --standalone --host win32-x64 --out ./out/win32-x64 bin.mjs",
     "models:download": "node scripts/download-models.mjs",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "npm run build:ts && node --test --test-concurrency=1 tests/**/*.test.js",
+    "test:watch": "npm run build:ts && node --test --watch tests/**/*.test.js",
+    "ota:updater": "bare bin.mjs --updater --update-window 0 --storage ./.storage-demo",
+    "ota:cli": "bare bin.mjs --update-window 0 --storage ./.storage-demo --json tools"
   },
   "dependencies": {
     "@qvac/sdk": "^0.17.1",
@@ -50,6 +56,7 @@
     "@types/node": "^22.0.0",
     "bare-build": "^1.0.1",
     "bare-runtime": "^1.29.5",
+    "bare": "^1.31.2",
     "prettier": "^3.6.2",
     "typescript": "^5.8.0"
   },

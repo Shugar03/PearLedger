@@ -1,13 +1,13 @@
-const fs = require('bare-fs')
-const fsx = require('fs-native-extensions')
-const daemon = require('bare-daemon')
-const path = require('bare-path')
-const Corestore = require('corestore')
-const Hyperswarm = require('hyperswarm')
-const PearRuntime = require('pear-runtime')
-const ReadyResource = require('ready-resource')
+import fs from 'bare-fs'
+import fsx from 'fs-native-extensions'
+import daemon from 'bare-daemon'
+import path from 'bare-path'
+import Corestore from 'corestore'
+import Hyperswarm from 'hyperswarm'
+import PearRuntime from 'pear-runtime'
+import ReadyResource from 'ready-resource'
 
-module.exports = class App extends ReadyResource {
+export default class App extends ReadyResource {
   static spawnUpdater(dir, app, entrypoint, updateWindow) {
     const args = entrypoint === null ? [] : [entrypoint]
     args.push('--updater', '--storage', dir)

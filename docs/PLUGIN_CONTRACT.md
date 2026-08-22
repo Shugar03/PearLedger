@@ -87,6 +87,29 @@ export async function register() {
 | `pearledger balance` | `get_wallet_balance` |
 | `pearledger tools` | `harness.listTools()` |
 
+### Flag `--json`
+
+Salida machine-readable para Evelin (UI / IPC):
+
+```bash
+npm run dev -- tools --json
+npm run dev -- ingest ./factura.pdf --json
+```
+
+---
+
+## IPC bridge (Evelin)
+
+[`harness/ipc-bridge.ts`](../harness/ipc-bridge.ts):
+
+```typescript
+import { executeTool, listTools, onHarnessEvent, ensureHarnessReady } from './harness/ipc-bridge.js'
+
+await ensureHarnessReady()
+const result = await executeTool('parse_invoice', { filePath: '/path/to.pdf' })
+onHarnessEvent('tool:done', (tool, result) => { /* update UI */ })
+```
+
 ---
 
 ## Reglas
