@@ -64,6 +64,7 @@
     "test:block-8-12": "npm run build:ts && node --env-file=.env scripts/test-block-8-12.mjs",
     "test:forecast": "npm run build:ts && node --env-file=.env scripts/test-forecast.mjs",
     "test:p2-wdk": "npm run build:ts && node --use-system-ca --env-file=.env scripts/test-p2-wdk.mjs",
+    "test:p2-live": "npm run build:ts && node --use-system-ca --env-file=.env scripts/test-p2-live-pay.mjs",
     "wdk:mcp": "node --use-system-ca --env-file=.env workers/wdk-worker.js",
     "wdk:mcp:status": "node --use-system-ca --env-file=.env workers/wdk-worker.js --status",
     "lint": "tsc --noEmit",
