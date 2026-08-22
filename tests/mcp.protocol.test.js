@@ -1,6 +1,6 @@
 /**
  * TDD — protocolo MCP (Client ↔ Server in-process)
- * SPEC: MCP-T01…T04
+ * SPEC: MCP-T01…T09
  *
  * Red → green: listTools / callTool contra createPearledgerMcpServer().
  */
@@ -88,5 +88,36 @@ describe('MCP TDD (protocolo)', () => {
   it('MCP-T06: harness y MCP ven el mismo registro vivo', () => {
     const harnessNames = harness.listTools().map((t) => t.name).sort()
     assert.deepEqual(harnessNames, contractToolNames().sort())
+  })
+
+  it('MCP-T07: pago sobre umbral sin confirmed → blocked vía MCP', async () => {
+    const result = await client.callTool({
+      name: 'execute_gasless_payment',
+      arguments: {
+        to: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+        amount: 1500,
+        dryRun: true
+      }
+    })
+    assert.notEqual(result.isError, true)
+    const parsed = JSON.parse(result.content[0].text)
+    assert.equal(parsed.blocked, true)
+    assert.equal(parsed.requiresConfirmation, true)
+  })
+
+  it('MCP-T08: quote_payment sin to → error de validación MCP', async () => {
+    const result = await client.callTool({
+      name: 'quote_payment',
+      arguments: { amount: 10 }
+    })
+    assert.equal(result.isError, true)
+  })
+
+  it('MCP-T09: match_purchase_order {} viola requiredAnyOf', async () => {
+    const result = await client.callTool({
+      name: 'match_purchase_order',
+      arguments: {}
+    })
+    assert.equal(result.isError, true)
   })
 })

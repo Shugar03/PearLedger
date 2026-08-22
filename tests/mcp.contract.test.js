@@ -1,6 +1,6 @@
 /**
  * CDD — Contract-Driven Development
- * SPEC: MCP-C01…C04
+ * SPEC: MCP-C01…C07
  *
  * El contrato máquina (contracts/tools.contract.json) debe coincidir con:
  * - docs/PLUGIN_CONTRACT.md / FROZEN_TOOLS del harness
@@ -67,5 +67,26 @@ describe('MCP CDD (contrato)', () => {
     assert.equal(contract.server, 'pearledger-mcp')
     assert.equal(contract.source, 'docs/PLUGIN_CONTRACT.md')
     assert.ok(contract.version)
+  })
+
+  it('MCP-C06: requiredAnyOf tiene schema enforceable (refine)', async () => {
+    const { schemaForTool } = await import('../workers/pearledger-mcp.js')
+    const name = 'match_purchase_order'
+    const spec = contractTool(name, contract)
+    assert.ok(spec.requiredAnyOf?.length, 'contract must declare requiredAnyOf')
+
+    const schema = schemaForTool(name, TOOL_INPUT[name])
+    assert.equal(schema.safeParse({}).success, false)
+    assert.equal(schema.safeParse({ invoiceId: 'INV-1' }).success, true)
+    assert.equal(
+      schema.safeParse({ invoice: { invoiceNumber: 'INV-1' } }).success,
+      true
+    )
+  })
+
+  it('MCP-C07: safety de pagos en contrato (>umbral + preferDryRun)', () => {
+    const pay = contractTool('execute_gasless_payment', contract)
+    assert.equal(pay.safety?.confirmAboveUsdt, 1000)
+    assert.equal(pay.safety?.preferDryRun, true)
   })
 })

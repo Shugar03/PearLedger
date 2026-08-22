@@ -67,4 +67,6 @@ Misma lógica; no duplicar handlers.
 npm run test:mcp
 ```
 
-Specs: `MCP-C01…C05` (contrato), `MCP-T01…T06` (protocolo), más smoke `--status`.
+Specs: `MCP-C01…C07` (contrato, incl. `requiredAnyOf` + safety), `MCP-T01…T09` (protocolo: list/call, pago bloqueado, validación), más smoke `--status`.
+
+Runtime: el MCP **no arranca** si `harness.listTools()` no coincide con el contrato (plugins fail-soft incompletos).

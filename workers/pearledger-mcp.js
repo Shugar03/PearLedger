@@ -17,6 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { harness, loadPlugins, expectedToolNames } from '../dist/harness/loader.js'
 import {
+  contractTool,
   contractToolNames,
   loadToolsContract
 } from '../contracts/load-contract.js'
@@ -97,18 +98,56 @@ function errorResult(err) {
   }
 }
 
+/**
+ * Zod schema from TOOL_INPUT shape + CDD requiredAnyOf (si aplica).
+ * @param {string} toolName
+ * @param {Record<string, z.ZodTypeAny>} shape
+ */
+export function schemaForTool(toolName, shape) {
+  let schema = z.object(shape)
+  const anyOf = contractTool(toolName).requiredAnyOf
+  if (anyOf?.length) {
+    schema = schema.refine(
+      (data) =>
+        anyOf.some((group) =>
+          group.every((key) => {
+            const v = data[key]
+            return v !== undefined && v !== null && v !== ''
+          })
+        ),
+      {
+        message: `${toolName} requires one of: ${anyOf
+          .map((g) => g.join('+'))
+          .join(' | ')}`
+      }
+    )
+  }
+  return schema
+}
+
 function assertContractAlignment() {
   const fromContract = contractToolNames().sort()
-  const fromHarness = expectedToolNames().sort()
+  const fromFrozen = expectedToolNames().sort()
   const fromMcp = Object.keys(TOOL_INPUT).sort()
-  if (JSON.stringify(fromContract) !== JSON.stringify(fromHarness)) {
+  const fromLive = harness
+    .listTools()
+    .map((t) => t.name)
+    .sort()
+
+  if (JSON.stringify(fromContract) !== JSON.stringify(fromFrozen)) {
     throw new Error(
-      `[pearledger-mcp] CDD drift: contract ≠ harness\ncontract=${fromContract}\nharness=${fromHarness}`
+      `[pearledger-mcp] CDD drift: contract ≠ FROZEN_TOOLS\ncontract=${fromContract}\nfrozen=${fromFrozen}`
     )
   }
   if (JSON.stringify(fromContract) !== JSON.stringify(fromMcp)) {
     throw new Error(
       `[pearledger-mcp] CDD drift: contract ≠ TOOL_INPUT\ncontract=${fromContract}\nmcp=${fromMcp}`
+    )
+  }
+  // Fail-soft plugins can leave live registry incomplete — do not advertise a partial MCP.
+  if (JSON.stringify(fromContract) !== JSON.stringify(fromLive)) {
+    throw new Error(
+      `[pearledger-mcp] CDD drift: contract ≠ live harness.listTools()\ncontract=${fromContract}\nlive=${fromLive}`
     )
   }
 }
@@ -128,8 +167,8 @@ export async function createPearledgerMcpServer() {
   })
 
   for (const tool of harness.listTools()) {
-    const inputSchema = TOOL_INPUT[tool.name]
-    if (!inputSchema) {
+    const shape = TOOL_INPUT[tool.name]
+    if (!shape) {
       throw new Error(`[pearledger-mcp] missing TOOL_INPUT for ${tool.name}`)
     }
 
@@ -138,14 +177,13 @@ export async function createPearledgerMcpServer() {
       {
         title: tool.name,
         description: tool.description || `PearLedger harness tool: ${tool.name}`,
-        inputSchema,
+        inputSchema: schemaForTool(tool.name, shape),
         annotations: {
           readOnlyHint: !['execute_gasless_payment', 'draft_purchase_order'].includes(
             tool.name
           ),
           destructiveHint: tool.name === 'execute_gasless_payment',
-          openWorldHint:
-            tool.name.startsWith('execute_') || tool.name.includes('payment')
+          openWorldHint: tool.name === 'execute_gasless_payment'
         }
       },
       async (args) => {
