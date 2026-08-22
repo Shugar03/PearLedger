@@ -81,8 +81,36 @@ $('#btn-quote').addEventListener('click', async () => {
 $('#btn-pay-dry').addEventListener('click', async () => {
   const to = $('#pay-vendor').value.trim()
   const amount = Number($('#pay-amount').value)
+  const threshold = Number(window.__PEAR_THRESHOLD__ || 1000)
+  let confirmed = false
+
+  if (amount > threshold) {
+    const modal = $('#confirm-modal')
+    const msg = $('#confirm-message')
+    msg.textContent = `Pago de $${amount} USDt supera el umbral de $${threshold}. ¿Confirmás?`
+    modal.showModal()
+    const choice = await new Promise((resolve) => {
+      modal.addEventListener(
+        'close',
+        () => resolve(modal.returnValue === 'confirm'),
+        { once: true }
+      )
+    })
+    if (!choice) {
+      setStatus('Pago cancelado', 'error')
+      renderJson($('#pay-result'), { cancelled: true, amount, threshold })
+      return
+    }
+    confirmed = true
+  }
+
   const quote = await runTool('quote_payment', { to, amount })
-  const payment = await runTool('execute_gasless_payment', { to, amount, dryRun: true })
+  const payment = await runTool('execute_gasless_payment', {
+    to,
+    amount,
+    dryRun: true,
+    confirmed
+  })
   renderJson($('#pay-result'), { quote, payment })
 })
 

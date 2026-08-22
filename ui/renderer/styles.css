@@ -204,3 +204,25 @@ input {
   border-color: var(--danger);
   background: #3a2020;
 }
+
+.confirm-modal {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  background: var(--panel);
+  color: var(--text);
+  max-width: 420px;
+}
+
+.confirm-modal::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.confirm-card {
+  margin: 0;
+  padding: 1.25rem;
+}
+
+.confirm-card h2 {
+  margin-top: 0;
+}

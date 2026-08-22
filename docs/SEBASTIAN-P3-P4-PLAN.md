@@ -157,6 +157,8 @@ Link estable CI: `pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o` (
 - [ ] CI job `Stage pear:// release` en último push a `main`: **skipped** (run [32582828179](https://github.com/Shugar03/PearLedger/actions/runs/32582828179) falló en `Test harness` tras merge Antony #2); último stage verde: run [32580001949](https://github.com/Shugar03/PearLedger/actions/runs/32580001949)
 - [x] Fix local listo (sin push): `t.skip` + `return` en P3-01; fixture PNG + skip OCR en CI; `parse_invoice` valida rechazo de `.gitkeep`
 - [x] `npm test` local post-A2 / con `CI=true`: 17 pass + 1 skip OK
+- [x] Fix Bare post-Antony: `package.json` `imports` (node:fs/path → bare-*) + deps `utf-8-validate`/`bufferutil` (tests CI verdes; build linux fallaba por MODULE_NOT_FOUND)
+- [x] UI: modal confirmación pagos >$1k en `ui/renderer`
 
 
 ---
