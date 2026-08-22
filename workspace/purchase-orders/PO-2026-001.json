@@ -1,0 +1,19 @@
+{
+  "purchaseOrderId": "PO-2026-001",
+  "vendor": "Proveedor Demo S.A.",
+  "date": "2026-08-15",
+  "currency": "USD",
+  "lineItems": [
+    {
+      "sku": "MAT-001",
+      "description": "Material de oficina",
+      "quantity": 1,
+      "unitPrice": 100.0,
+      "total": 100.0
+    }
+  ],
+  "subtotal": 100.0,
+  "tax": 0.0,
+  "total": 100.0,
+  "status": "approved"
+}

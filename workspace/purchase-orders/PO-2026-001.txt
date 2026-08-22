@@ -1,0 +1,12 @@
+PURCHASE ORDER PO-2026-001
+Vendor: Proveedor Demo S.A.
+Date: 2026-08-15
+Currency: USD
+
+Line items:
+- SKU MAT-001 | Material de oficina | Qty 1 | Unit $100.00 | Total $100.00
+
+Subtotal: $100.00
+Tax: $0.00
+Total: $100.00
+Status: approved
