@@ -47,6 +47,7 @@ describe('CLI dev + build artifacts', () => {
     const bin = path.join(root, 'out', `${platform}-${arch}`, name)
     if (!fs.existsSync(bin)) {
       t.skip(`Sin binario en ${bin} — correr npm run make:${platform}-${arch}`)
+      return
     }
     assert.ok(fs.existsSync(bin))
   })

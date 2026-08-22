@@ -144,6 +144,21 @@ pear info pear://48oa46...
 
 **Commit sugerido:** `feat(p3): bare build + OTA demo --update-window 0`
 
+### Fase A2 — OTA E2E (Windows + link CI, 2026-08-22)
+
+Link estable CI: `pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o` (name `pear-ledger` v0.1.0; verlink `pear://0.202.rxqrpu8...`)
+
+- [x] `pear info` confirma content key + blobs (`pear.exe` v3.2.0)
+- [x] Binario `./out/win32-x64/pearledger.exe` (sin rebuild; ya presente)
+- [x] Terminal 1: `--updater --update-window 0 --storage ./.storage-demo`
+- [x] Terminal 2: `--update-window 0 --storage ./.storage-demo --json tools` → 8 tools JSON
+- [x] `.storage-demo/updates.log` creado (0 bytes; vacío sin update remoto — esperado en demo local)
+- [ ] `pear install pear://rxqrpu8...` — intento colgó >5 min sin stdout (matar PID / reintentar con app Pear o mejor conectividad P2P)
+- [ ] CI job `Stage pear:// release` en último push a `main`: **skipped** (run [32582828179](https://github.com/Shugar03/PearLedger/actions/runs/32582828179) falló en `Test harness` tras merge Antony #2); último stage verde: run [32580001949](https://github.com/Shugar03/PearLedger/actions/runs/32580001949)
+- [x] Fix local listo (sin push): `t.skip` + `return` en P3-01; fixture PNG + skip OCR en CI; `parse_invoice` valida rechazo de `.gitkeep`
+- [x] `npm test` local post-A2 / con `CI=true`: 17 pass + 1 skip OK
+
+
 ---
 
 ### Fase 4 — P3 CI + hardening (1–2 h)
