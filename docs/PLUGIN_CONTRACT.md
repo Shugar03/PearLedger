@@ -1,129 +1,119 @@
-# Contrato de plugins — PearLedger harness (P4)
+# Contrato de plugins
 
-> Owner: **Sebastian**. Consumidores: **Antony** (handlers P1/P2), **Evelin** (UI vía CLI/IPC).  
-> No cambiar nombres de tools ni shapes de params sin actualizar `docs/TEAM.md`.
+Cómo se escribe un plugin de PearLedger. Las reglas transversales (alias `@`,
+logging, rutas, configuración) están en [`../CONVENTIONS.md`](../CONVENTIONS.md)
+y se verifican con `npm run lint:rules`.
 
----
+## Forma de un plugin
 
-## API del harness
+Cada plugin vive en `src/plugins/<nombre>/` y exporta dos cosas:
 
-```typescript
-// harness/core.ts
-harness.registerTool({ name, description, handler, plugin })
-harness.registerHook(fn)
-harness.execute(name, params) → Promise<unknown>
-harness.listTools() → Tool[]
-```
+```ts
+// src/plugins/mi-plugin/index.ts
+import { registerTools } from '@core/loader.js'
+import type { PluginHost } from '@core/types.js'
 
-Hooks reciben `(tool, params)` y devuelven `{ proceed: boolean, params }`.
+export const name = 'plugin-mi-plugin'
 
----
-
-## Formato de plugin
-
-Cada plugin vive en `workspace/plugins/<nombre>/` y exporta:
-
-```typescript
-export const name = 'plugin-xxx'
-
-export async function register(h: Harness): Promise<void> {
-  h.registerTool({
-    name: 'tool_name',
-    description: '...',
-    plugin: name,
-    handler: async (params) => { /* implementación */ },
-  })
+export async function register(host: PluginHost): Promise<void> {
+  registerTools(host, name, [
+    {
+      name: 'mi_tool',
+      description: 'Qué hace, en una línea',
+      handler: async (params) => {
+        // Devolvé datos. No imprimas: de la presentación se encarga @cli/render.
+        return { ok: true }
+      }
+    }
+  ])
 }
 ```
 
-O usar helper:
+El plugin **recibe su host** en vez de importar un singleton. Antes existía un
+ciclo `loader → plugin → loader.registerTools`; ahora la dependencia va en un
+solo sentido y cada test puede construir su propio harness aislado.
 
-```typescript
-import { registerTools } from '../../../harness/loader.js'
+## Alta en el loader
 
-export async function register() {
-  registerTools([{ name, description, handler }], name)
+Los imports de `src/core/loader.ts` son **estáticos a propósito**:
+
+```ts
+import * as miPlugin from '@plugins/mi-plugin/index.js'
+```
+
+`bare-pack` sólo sigue especificadores literales. Un loader dinámico por
+filesystem dejaría el plugin fuera del binario standalone, y el fallo no
+aparecería hasta que alguien ejecutara el ejecutable ya distribuido.
+
+## Interfaces del harness
+
+```ts
+interface Tool {
+  name: string
+  description: string
+  handler: (params: Record<string, unknown>) => Promise<unknown>
+  plugin: string
 }
+
+type HookFn = (tool: Tool, params: ToolParams) => Promise<{
+  proceed: boolean
+  params: ToolParams
+}>
 ```
 
----
+Eventos emitidos: `tool:registered`, `tool:executing`, `tool:done`,
+`tool:blocked`, `tool:failed`. El dashboard y Electron los consumen para mostrar
+actividad en vivo.
 
-## Tools registradas (congeladas)
+## Hooks
 
-### `plugin-invoice-ops` — Antony
+Los hooks corren en cadena antes de cada `execute`. El primero que devuelve
+`proceed:false` detiene la ejecución y el harness responde
+`{blocked:true, reason, requiresConfirmation}`.
 
-| Tool | Params | Returns |
-|------|--------|---------|
-| `parse_invoice` | `{ filePath: string }` | `{ invoice, rawTextPreview? }` |
-| `match_purchase_order` | `{ invoiceId: string }` o `{ invoice: object }` | `{ matched, purchaseOrderId?, confidence, discrepancies }` |
+Se construyen con factories parametrizadas, no leyendo el entorno al importar:
 
-### `plugin-procurement-forecast` — Antony
-
-| Tool | Params | Returns |
-|------|--------|---------|
-| `check_inventory` | `{ sku?: string }` | `InventoryItem[]` |
-| `run_usage_forecast` | `{ sku?: string }` | `ForecastResult[]` |
-| `draft_purchase_order` | `{ forecast: ForecastResult }` | `string` (texto PO) |
-
-### `plugin-wdk-settlement` — Antony
-
-| Tool | Params | Returns |
-|------|--------|---------|
-| `get_wallet_balance` | `{ network?: 'mainnet' \| 'sepolia' }` | `{ usdt, native, address, network }` |
-| `quote_payment` | `{ to, amount, network? }` | `{ fee, sponsored, paymaster, ... }` |
-| `execute_gasless_payment` | `{ to, amount, dryRun?, confirmed? }` | `{ status, txHash?, ... }` |
-
-> Pagos > $1,000 USDt: hook de confirmación requiere `confirmed: true` o TTY interactivo.
-
----
-
-## Mapeo CLI → tool (Sebastian)
-
-| Comando CLI | Tool(s) |
-|-------------|---------|
-| `pearledger ingest <file>` | `parse_invoice` → opcional `match_purchase_order` |
-| `pearledger forecast [--sku]` | `run_usage_forecast` |
-| `pearledger pay --vendor --amount` | `quote_payment` → `execute_gasless_payment` |
-| `pearledger balance` | `get_wallet_balance` |
-| `pearledger tools` | `harness.listTools()` |
-
-### Flag `--json`
-
-Salida machine-readable para Evelin (UI / IPC):
-
-```bash
-npm run dev -- tools --json
-npm run dev -- ingest ./factura.pdf --json
+```ts
+export function createPaymentConfirmationHook({ threshold }: { threshold: number }): HookFn
 ```
 
----
+Así un test fija el umbral sin mutar `process.env`, y el composition root decide
+la política. Tras `loadPlugins(..., {seal:true})` el harness queda **sellado**:
+nadie puede inyectar después un hook que se salte la confirmación de pagos.
 
-## IPC bridge (Evelin)
+## Reglas para handlers
 
-[`harness/ipc-bridge.ts`](../harness/ipc-bridge.ts) — importar desde Electron main o tests Node:
+1. **Devolvé datos, no imprimas.** El único escritor de stdout del proyecto es
+   `writeOut()` en `@cli/render.js`. Un `console.log` en un handler rompe
+   `--json` y con ello el contrato con la UI.
+2. **Nada de `process.cwd()`.** Usá `workspaceDir()` / `dataDir()` de
+   `@shared/paths.js`. La app se ejecuta desde el directorio del usuario.
+3. **Nada de `process.env`.** Usá `getConfig()` de `@config/index.js`. Variables
+   nuevas: añadilas al esquema zod y a `.env.example`.
+4. **Fallá cerrado con dinero.** Sin credenciales, lanzá; no asumas un valor por
+   defecto. Un pago en vivo exige orden de compra conciliada.
+5. **Sin estado global entre ejecuciones.** Si cacheás, exponé un `reset…()`
+   para los tests.
 
-```typescript
-import { executeTool, listTools, onHarnessEvent, ensureHarnessReady } from './harness/ipc-bridge.js'
+## Consumir el harness desde fuera
+
+```ts
+import { ensureHarnessReady, executeTool, listTools, onHarnessEvent } from '@ipc/bridge.js'
 
 await ensureHarnessReady()
-const result = await executeTool('parse_invoice', { filePath: '/path/to.pdf' })
-onHarnessEvent('tool:done', (tool, result) => { /* update UI */ })
+const tools = await listTools()               // async; devuelve ToolDescriptor[]
+const result = await executeTool('mi_tool', { a: 1 })
+const off = onHarnessEvent('tool:done', (tool, res) => { /* … */ })
+off()                                          // devuelve su desuscripción
 ```
 
-**UI scaffold:** `ui/` — `npm run ui:dev` expone `window.pear.execute()` vía preload.
+`listTools()` entrega `ToolDescriptor` (`{name, description, plugin}`), sin el
+handler: el objeto `Tool` lleva una función y no sobrevive a la serialización
+por IPC.
 
-Guía equipo: [`docs/PHASE-B-INTEGRATION.md`](./PHASE-B-INTEGRATION.md).
+## Contrato de tools congelado
 
----
-
-## Reglas
-
-1. **Handlers no importan** `bin.mjs` ni `app.js`.
-2. **No llamadas cloud** en plugins P1 (QVAC local only).
-3. **QVAC:** structured output y tool calls en **llamadas separadas** (evitar HTTP 400).
-4. **WDK:** `dryRun: false` explícito para txs reales; Sepolia usa MOCK USDt.
-5. Plugins que fallen al cargar → warning en loader, CLI sigue (fail-soft en dev).
-
----
-
-*Ver asignación completa en [`TEAM.md`](./TEAM.md)*
+`src/core/tool-contract.test.ts` fija la lista de tools esperadas por plugin. Se
+declara a mano **a propósito**: derivarla de los plugios convertiría el test en
+una tautología que pasaría aunque un plugin dejara de registrar sus tools.
+Añadir una tool implica actualizar ese archivo en el mismo commit.

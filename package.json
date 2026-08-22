@@ -4,11 +4,13 @@
   "description": "Agente local de operaciones financieras, tesorería y logística P2P — Hackathon Aleph 2026",
   "productName": "pearledger",
   "private": false,
-  "bin": "bin.mjs",
+  "bin": {
+    "pearledger": "./dist/bin.js"
+  },
   "upgrade": "pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o",
   "type": "module",
   "engines": {
-    "node": ">=22.17"
+    "node": ">=22.18"
   },
   "imports": {
     "fs": {
@@ -42,41 +44,88 @@
     "node:url": {
       "bare": "bare-url",
       "default": "node:url"
+    },
+    "os": {
+      "bare": "bare-os",
+      "default": "os"
+    },
+    "node:os": {
+      "bare": "bare-os",
+      "default": "node:os"
+    },
+    "process": {
+      "bare": "bare-process",
+      "default": "process"
+    },
+    "node:process": {
+      "bare": "bare-process",
+      "default": "node:process"
+    },
+    "child_process": {
+      "bare": "bare-subprocess",
+      "default": "child_process"
+    },
+    "node:child_process": {
+      "bare": "bare-subprocess",
+      "default": "node:child_process"
+    },
+    "events": {
+      "bare": "bare-events",
+      "default": "events"
+    },
+    "node:events": {
+      "bare": "bare-events",
+      "default": "node:events"
+    },
+    "crypto": {
+      "bare": "bare-crypto",
+      "default": "crypto"
+    },
+    "node:crypto": {
+      "bare": "bare-crypto",
+      "default": "node:crypto"
+    },
+    "http": {
+      "bare": "bare-http1",
+      "default": "http"
+    },
+    "node:http": {
+      "bare": "bare-http1",
+      "default": "node:http"
     }
   },
   "scripts": {
-    "start": "bare bin.mjs --no-updates",
-    "dev": "node --use-system-ca cli/dev.mjs",
-    "build:ts": "tsc",
-    "prestart": "npm run build:ts",
-    "make": "node scripts/make.js",
-    "make:darwin-arm64": "bare-build --name pearledger --standalone --host darwin-arm64 --out ./out/darwin-arm64 bin.mjs",
-    "make:darwin-x64": "bare-build --name pearledger --standalone --host darwin-x64 --out ./out/darwin-x64 bin.mjs",
-    "make:linux-arm64": "bare-build --name pearledger --standalone --host linux-arm64 --out ./out/linux-arm64 bin.mjs",
-    "make:linux-x64": "bare-build --name pearledger --standalone --host linux-x64 --out ./out/linux-x64 bin.mjs",
-    "make:win32-arm64": "bare-build --name pearledger --standalone --host win32-arm64 --out ./out/win32-arm64 bin.mjs",
-    "make:win32-x64": "bare-build --name pearledger --standalone --host win32-x64 --out ./out/win32-x64 bin.mjs",
-    "models:download": "node scripts/download-models.mjs",
-    "fixtures:seed": "node scripts/seed-demo-fixtures.mjs",
-    "fixtures:invoice": "powershell -NoProfile -File scripts/generate-demo-invoice.ps1",
-    "predev": "npm run build:ts && npm run fixtures:seed",
-    "test:block-3-8": "npm run build:ts && node --env-file=.env scripts/test-block-3-8.mjs",
-    "test:matcher": "npm run build:ts && node --env-file=.env scripts/test-matcher-rag.mjs",
-    "test:block-8-12": "npm run build:ts && node --env-file=.env scripts/test-block-8-12.mjs",
-    "test:forecast": "npm run build:ts && node --env-file=.env scripts/test-forecast.mjs",
-    "test:p2-wdk": "npm run build:ts && node --use-system-ca --env-file=.env scripts/test-p2-wdk.mjs",
-    "test:p2-live": "npm run build:ts && node --use-system-ca --env-file=.env scripts/test-p2-live-pay.mjs",
-    "wdk:mcp": "node --use-system-ca --env-file=.env workers/wdk-worker.js",
-    "wdk:mcp:status": "node --use-system-ca --env-file=.env workers/wdk-worker.js --status",
-    "lint": "tsc --noEmit",
-    "test": "npm run build:ts && node --test --test-concurrency=1 tests/**/*.test.js",
-    "test:watch": "npm run build:ts && node --test --watch tests/**/*.test.js",
-    "ota:updater": "bare bin.mjs --updater --update-window 0 --storage ./.storage-demo",
-    "ota:cli": "bare bin.mjs --update-window 0 --storage ./.storage-demo --json tools",
-    "pear:stage:prepare": "node scripts/prepare-pear-stage.mjs",
+    "gen:meta": "node scripts/build/gen-meta.ts",
+    "build": "npm run gen:meta && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && npm run build:web",
+    "build:web": "node scripts/build/copy-web.ts",
+    "build:ts": "npm run build",
+    "clean": "node scripts/build/clean.ts",
+    "start": "bare dist/bin.js --no-updates",
+    "prestart": "npm run build",
+    "dev": "node --use-system-ca dist/dev.js",
+    "predev": "npm run build",
+    "dashboard": "node --use-system-ca dist/dev.js dashboard",
+    "predashboard": "npm run build",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "lint:rules": "node scripts/check-conventions.ts",
+    "test": "npm run build && node --test \"dist/**/*.test.js\"",
+    "test:watch": "node --test --watch \"dist/**/*.test.js\"",
+    "make": "node scripts/make.ts",
+    "make:darwin-arm64": "bare-build --name pearledger --standalone --host darwin-arm64 --out ./out/darwin-arm64 dist/bin.js",
+    "make:darwin-x64": "bare-build --name pearledger --standalone --host darwin-x64 --out ./out/darwin-x64 dist/bin.js",
+    "make:linux-arm64": "bare-build --name pearledger --standalone --host linux-arm64 --out ./out/linux-arm64 dist/bin.js",
+    "make:linux-x64": "bare-build --name pearledger --standalone --host linux-x64 --out ./out/linux-x64 dist/bin.js",
+    "make:win32-arm64": "bare-build --name pearledger --standalone --host win32-arm64 --out ./out/win32-arm64 dist/bin.js",
+    "make:win32-x64": "bare-build --name pearledger --standalone --host win32-x64 --out ./out/win32-x64 dist/bin.js",
+    "pear:build": "pear build --target ../pearledger-deployment",
+    "models:download": "npm run build && node dist/scripts/download-models.js",
+    "fixtures:seed": "npm run build && node dist/scripts/seed-fixtures.js",
+    "wdk:mcp": "node --use-system-ca --env-file=.env dist/workers/wdk-worker.js",
+    "wdk:mcp:status": "node --use-system-ca --env-file=.env dist/workers/wdk-worker.js --status",
     "ui:install": "npm install --prefix ui",
-    "ui:dev": "npm run build:ts && npm run ui:install && npm run dev --prefix ui",
-    "smoke:team": "npm test && npm run dev -- tools --json"
+    "ui:dev": "npm run build && npm run ui:install && npm run dev --prefix ui",
+    "smoke": "npm run build && node dist/scripts/smoke.js",
+    "bench": "npm run build && node dist/scripts/bench-ingest.js"
   },
   "dependencies": {
     "@qvac/sdk": "^0.17.1",
@@ -85,7 +134,6 @@
     "@tetherto/wdk-wallet-evm-erc-4337": "1.0.0-beta.16",
     "bare-console": "^6.2.0",
     "bare-daemon": "^1.2.4",
-    "bare-ffmpeg": "^1.5.0",
     "bare-file-logger": "^1.2.1",
     "bare-fs": "^4.7.2",
     "bare-node-runtime": "^1.5.0",
@@ -111,6 +159,7 @@
     "bare-build": "^1.0.1",
     "bare-runtime": "^1.29.5",
     "prettier": "^3.6.2",
+    "tsc-alias": "^1.9.2",
     "typescript": "^5.8.0"
   },
   "repository": {
@@ -128,5 +177,33 @@
     "aleph"
   ],
   "author": "Sebastian Villarreal Paz",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "main": "./dist/ipc/bridge.js",
+  "types": "./dist/ipc/bridge.d.ts",
+  "pear": {
+    "name": "pearledger",
+    "stage": {
+      "ignore": [
+        "/.git",
+        "/.github",
+        "/node_modules",
+        "/out",
+        "/vendor",
+        "/tests",
+        "/scripts",
+        "/docs",
+        "/ui",
+        "/src",
+        "/.storage-demo",
+        "/.storage-pear-ci",
+        "/pear-stage",
+        "/deployment",
+        "/.env",
+        "/.env.example",
+        "**/node_modules",
+        "**/*.log",
+        "**/.DS_Store"
+      ]
+    }
+  }
 }

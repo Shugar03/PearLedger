@@ -26,7 +26,7 @@
 
 ## [12:00 – 18:00] Plugins & Harness
 
-- [ ] Integrar harness en `bin.mjs` routing
+- [ ] Integrar harness en `src/bin.ts` routing
 - [ ] `plugin-invoice-ops`: OCR + RAG + Zod
 - [ ] `plugin-procurement-forecast`: forecast + draft PO
 - [ ] `plugin-wdk-settlement`: balance + pay + hook >$1k

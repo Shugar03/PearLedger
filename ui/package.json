@@ -10,9 +10,6 @@
     "start": "electron ."
   },
   "devDependencies": {
-    "electron": "^33.2.0"
-  },
-  "dependencies": {
-    "pear-ledger": "file:.."
+    "electron": "^43.4.1"
   }
 }

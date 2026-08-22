@@ -33,11 +33,11 @@
 
 | Archivo / carpeta | Responsabilidad |
 |-------------------|-----------------|
-| `app.js` | PearRuntime, Corestore, Hyperswarm, OTA |
-| `bin.mjs` | CLI shell, routing → `harness.execute()`, spawn updater |
-| `harness/core.ts` | Event bus, registro tools, `execute()` |
-| `harness/loader.ts` | Carga plugins, fail-soft |
-| `harness/hooks.ts` | Hooks genéricos (sanitización, confirmación >$1k) |
+| `src/pear/app.ts` | PearRuntime, Corestore, Hyperswarm, OTA |
+| `src/bin.ts` | CLI shell, routing → `harness.execute()`, spawn updater |
+| `src/core/harness.ts` | Event bus, registro tools, `execute()` |
+| `src/core/loader.ts` | Carga plugins, fail-soft |
+| `src/core/hooks.ts` | Hooks genéricos (sanitización, confirmación >$1k) |
 | `workers/updater.js` | Signal handlers, `updates.log` |
 | `pear.config.json` | Channel + key Pear |
 | `package.json` | Campo `upgrade`, scripts `make:*` |
@@ -55,26 +55,26 @@
 | Archivo / carpeta | Responsabilidad |
 |-------------------|-----------------|
 | **P1 — QVAC** | |
-| `workspace/plugins/plugin-invoice-ops/ocr.ts` | OCR Path B, `@qvac/sdk` |
-| `workspace/plugins/plugin-invoice-ops/matcher.ts` | RAG / 3-way match |
-| `workspace/plugins/plugin-invoice-ops/schema.ts` | Zod structured output |
-| `workspace/plugins/plugin-procurement-forecast/algorithm.ts` | Forecast + draft PO |
-| `workspace/plugins/plugin-procurement-forecast/index.ts` | Handlers QVAC (solo lógica) |
+| `src/plugins/invoice-ops/ocr.ts` | OCR Path B, `@qvac/sdk` |
+| `src/plugins/invoice-ops/matcher.ts` | RAG / 3-way match |
+| `src/plugins/invoice-ops/schema.ts` | Zod structured output |
+| `src/plugins/procurement-forecast/algorithm.ts` | Forecast + draft PO |
+| `src/plugins/procurement-forecast/index.ts` | Handlers QVAC (solo lógica) |
 | `workers/main.js` | Worker QVAC si aplica |
 | `qvac.config.json` | `ctx_size ≥ 4096`, paths modelos |
 | `models/` | Descarga y paths locales (~5 GB) |
 | `scripts/download-models.mjs` | Automatizar descarga si es posible |
 | **P2 — WDK** | |
-| `workspace/plugins/plugin-wdk-settlement/paymaster.ts` | Pimlico/Candide, 7702 + 4337 |
-| `workspace/plugins/plugin-wdk-settlement/index.ts` | Handlers WDK (solo lógica) |
-| `workspace/plugins/plugin-wdk-settlement/hooks.ts` | Hooks específicos WDK si hace falta |
+| `src/plugins/wdk-settlement/paymaster.ts` | Pimlico/Candide, 7702 + 4337 |
+| `src/plugins/wdk-settlement/index.ts` | Handlers WDK (solo lógica) |
+| `src/plugins/wdk-settlement/hooks.ts` | Hooks específicos WDK si hace falta |
 | `workers/wdk-worker.js` | MCP server `wdk-mcp` |
 | `.env` / `.env.example` | Keys Pimlico, seed, RPC (nunca commitear `.env`) |
 
 **Reglas P1:** cero llamadas a OpenAI/Anthropic/cloud. Inferencia solo `@qvac/sdk`.  
 **Reglas P2:** `dryRun:false` explícito en demo; `safeModulesVersion: '0.3.0'`; Sepolia = MOCK USDt.
 
-**No tocar:** `app.js`, `harness/core.ts`, `bin.mjs` (routing lo cablea Sebastian).
+**No tocar:** `src/pear/app.ts`, `src/core/harness.ts`, `src/bin.ts` (routing lo cablea Sebastian).
 
 ---
 
@@ -129,7 +129,7 @@
 
 **Reglas estrictas:**
 - **No duplicar lógica:** OCR, RAG, pagos y forecast viven en plugins (Antony). La UI solo invoca y visualiza.
-- **No tocar:** `app.js`, `harness/core.ts`, `bin.mjs`, plugins de Antony.
+- **No tocar:** `src/pear/app.ts`, `src/core/harness.ts`, `src/bin.ts`, plugins de Antony.
 - **Lenguaje de negocio en UI:** “Proveedor”, “Aprobar pago” — nunca `execute_gasless_payment` visible al usuario.
 - **Modo secundario en arquitectura**, pero **must-have en narrativa de producto** para demo y usuarios reales.
 
@@ -241,7 +241,7 @@ Tools con nombres **congelados** — no renombrar sin acuerdo del equipo:
 | `plugin-procurement-forecast` | `check_inventory`, `run_usage_forecast`, `draft_purchase_order` | Antony |
 | `plugin-wdk-settlement` | `get_wallet_balance`, `quote_payment`, `execute_gasless_payment` | Antony |
 
-Sebastian cablea `bin.mjs` → `harness.execute('<tool>', params)`.  
+Sebastian cablea `src/bin.ts` → `harness.execute('<tool>', params)`.  
 Antony implementa el `handler` dentro de cada plugin.
 
 Ver detalle en [`PLUGIN_CONTRACT.md`](./PLUGIN_CONTRACT.md) *(pendiente — owner: Sebastian)*.

@@ -92,7 +92,7 @@ Monto **>$1000** queda bloqueado por el hook humano salvo `confirmed: true` (UI/
 1. `balance` → MOCK USDt > 0, fee narrative $0  
 2. `pay` dry-run → sponsored  
 3. `pay --dry-run=false` → `txHash`  
-4. Permalink código: `workspace/plugins/plugin-wdk-settlement/paymaster.ts`
+4. Permalink código: `src/plugins/wdk-settlement/paymaster.ts`
 
 ## Troubleshooting
 
