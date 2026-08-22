@@ -42,8 +42,10 @@ jobs:
       - name: Convenciones del proyecto
         run: npm run lint:rules
 
+      # El glob, y no `node --test dist/`: desde Node 24 un directorio se
+      # resuelve como módulo y el paso muere con MODULE_NOT_FOUND.
       - name: Tests
-        run: node --test dist/
+        run: node --test "dist/**/*.test.js"
 
       - name: Auditoría de dependencias
         run: npm audit --audit-level=high
