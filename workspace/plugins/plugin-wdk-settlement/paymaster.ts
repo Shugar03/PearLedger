@@ -82,15 +82,35 @@ function providerUrl(network: Network): string {
   return process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com'
 }
 
+/** Lowercase hex — ethers rejects mixed-case that fails EIP-55 checksum. */
+function normalizeAddress(address: string): string {
+  const trimmed = address.trim()
+  if (!/^0x[0-9a-fA-F]{40}$/.test(trimmed)) {
+    throw new Error(`Invalid EVM address: ${address}`)
+  }
+  return trimmed.toLowerCase()
+}
+
 function tokenAddress(network: Network): string {
   if (network === 'mainnet') {
-    return process.env.WDK_USDT_MAINNET || '0xdAC17F958D2ee523468220AC697809737E73D23ec7'
+    return normalizeAddress(
+      process.env.WDK_USDT_MAINNET || '0xdAC17F958D2ee523468220AC697809737E73D23ec7'
+    )
   }
-  return process.env.WDK_MOCK_USDT_SEPOLIA || '0xd077a40066800590F633c0000900f7F6cD0A10dB'
+  // Official WDK Sepolia MOCK USDt (see @tetherto/wdk-cli wdk.tokens.json)
+  const MOCK_USDT = '0xd077A400968890Eacc75cdc901F0356c943e4fDb'
+  const LEGACY_BAD = '0xd077a40066800590f633c0000900f7f6cd0a10db'
+  const fromEnv = process.env.WDK_MOCK_USDT_SEPOLIA?.trim()
+  if (fromEnv && normalizeAddress(fromEnv) !== LEGACY_BAD) {
+    return normalizeAddress(fromEnv)
+  }
+  return normalizeAddress(MOCK_USDT)
 }
 
 function paymasterAddress(): string {
-  return process.env.WDK_PAYMASTER_ADDRESS || '0x8888888888888888888888888888888888882402'
+  return normalizeAddress(
+    process.env.WDK_PAYMASTER_ADDRESS || '0x8888888888888888888888888888888888882402'
+  )
 }
 
 function toBaseUnits(amount: number): bigint {
@@ -227,9 +247,11 @@ export async function quotePayment(params: {
     throw new Error('quotePayment requires to and amount')
   }
 
+  const recipient = normalizeAddress(params.to)
+
   if (!hasPaymasterKey()) {
     const result = {
-      to: params.to,
+      to: recipient,
       amount: params.amount,
       fee: '0.00',
       sponsored: true,
@@ -247,12 +269,12 @@ export async function quotePayment(params: {
     const account = await wallet.getAccount(0)
     const quote = await account.quoteTransfer({
       token: tokenAddress(network),
-      recipient: params.to,
+      recipient,
       amount: toBaseUnits(params.amount)
     })
 
     const result = {
-      to: params.to,
+      to: recipient,
       amount: params.amount,
       fee: fromBaseUnits(quote.fee),
       sponsored: true,
@@ -267,7 +289,7 @@ export async function quotePayment(params: {
     return result
   } catch (err) {
     const result = {
-      to: params.to,
+      to: recipient,
       amount: params.amount,
       fee: '0.00',
       sponsored: true,
@@ -310,6 +332,8 @@ export async function executeGaslessPayment(params: {
     throw new Error('executeGaslessPayment requires to and amount')
   }
 
+  const recipient = normalizeAddress(params.to)
+
   if (!hasPaymasterKey()) {
     return {
       dryRun: false,
@@ -326,31 +350,43 @@ export async function executeGaslessPayment(params: {
     const token = tokenAddress(network)
     const amount = toBaseUnits(params.amount)
 
+    let bal: bigint
     try {
-      const bal = await account.getTokenBalance(token)
-      if (bal < amount) {
-        return {
-          dryRun: false,
-          txHash: null,
-          network,
-          address: await account.getAddress(),
-          usdt: fromBaseUnits(bal),
-          required: fromBaseUnits(amount),
-          safeModulesVersion: SAFE_MODULES_VERSION,
-          status: 'insufficient_token_balance',
-          hint:
-            network === 'sepolia'
-              ? `Fondeá MOCK USDt (${token}) en la smart account`
-              : 'Fondeá USDt mainnet en la EOA antes de dryRun:false'
-        }
+      bal = await account.getTokenBalance(token)
+    } catch (err) {
+      return {
+        dryRun: false,
+        txHash: null,
+        network,
+        token,
+        address: await account.getAddress(),
+        safeModulesVersion: SAFE_MODULES_VERSION,
+        status: 'token_balance_unavailable',
+        error: errorMessage(err),
+        hint: 'No se pudo leer saldo del token — verificá RPC Sepolia y la dirección MOCK USDt'
       }
-    } catch {
-      // continue — transfer may still fail with clearer RPC error
+    }
+
+    if (bal < amount) {
+      return {
+        dryRun: false,
+        txHash: null,
+        network,
+        address: await account.getAddress(),
+        usdt: fromBaseUnits(bal),
+        required: fromBaseUnits(amount),
+        safeModulesVersion: SAFE_MODULES_VERSION,
+        status: 'insufficient_token_balance',
+        hint:
+          network === 'sepolia'
+            ? `Fondeá MOCK USDt (${token}) en la smart account`
+            : 'Fondeá USDt mainnet en la EOA antes de dryRun:false'
+      }
     }
 
     const result = await account.transfer({
       token,
-      recipient: params.to,
+      recipient,
       amount
     })
 
