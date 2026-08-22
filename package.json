@@ -66,6 +66,10 @@
     "test:forecast": "npm run build:ts && node --env-file=.env scripts/test-forecast.mjs",
     "test:p2-wdk": "npm run build:ts && node --use-system-ca --env-file=.env scripts/test-p2-wdk.mjs",
     "test:p2-live": "npm run build:ts && node --use-system-ca --env-file=.env scripts/test-p2-live-pay.mjs",
+    "mcp": "npm run build:ts && node --use-system-ca --env-file=.env workers/pearledger-mcp.js",
+    "mcp:status": "npm run build:ts && node --use-system-ca --env-file=.env workers/pearledger-mcp.js --status",
+    "mcp:setup": "node workers/pearledger-mcp.js --setup",
+    "test:mcp": "npm run build:ts && node --test --test-concurrency=1 tests/mcp.*.test.js",
     "wdk:mcp": "node --use-system-ca --env-file=.env workers/wdk-worker.js",
     "wdk:mcp:status": "node --use-system-ca --env-file=.env workers/wdk-worker.js --status",
     "lint": "tsc --noEmit",
@@ -79,6 +83,7 @@
     "smoke:team": "npm test && npm run dev -- tools --json"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@qvac/sdk": "^0.17.1",
     "@tetherto/wdk-cli": "1.0.0-beta.2",
     "@tetherto/wdk-wallet-evm-7702-gasless": "1.0.0-beta.4",

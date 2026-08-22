@@ -68,7 +68,8 @@
 | `workspace/plugins/plugin-wdk-settlement/paymaster.ts` | Pimlico/Candide, 7702 + 4337 |
 | `workspace/plugins/plugin-wdk-settlement/index.ts` | Handlers WDK (solo lógica) |
 | `workspace/plugins/plugin-wdk-settlement/hooks.ts` | Hooks específicos WDK si hace falta |
-| `workers/wdk-worker.js` | MCP server `wdk-mcp` |
+| `workers/wdk-worker.js` | MCP oficial WDK (`wdk-mcp`) |
+| `workers/pearledger-mcp.js` | MCP producto PearLedger (8 tools harness) — ver `docs/MCP.md` |
 | `.env` / `.env.example` | Keys Pimlico, seed, RPC (nunca commitear `.env`) |
 
 **Reglas P1:** cero llamadas a OpenAI/Anthropic/cloud. Inferencia solo `@qvac/sdk`.  

@@ -43,6 +43,7 @@ Basado en [hello-pear-bare @ `variant/daemon`](https://github.com/holepunchto/he
 pearledger CLI (bin.mjs)
     ├── QVAC SDK      → OCR + LLM + RAG (100% local)
     ├── WDK CLI/MCP   → Pagos gasless USDt
+    ├── PearLedger MCP → 8 tools harness (Cursor / Claude) — docs/MCP.md
     ├── Bare runtime  → Sin Node.js en producción
     └── Pear variant/daemon → OTA P2P (pear://<key>)
 ```

@@ -112,6 +112,12 @@ onHarnessEvent('tool:done', (tool, result) => { /* update UI */ })
 
 **UI scaffold:** `ui/` — `npm run ui:dev` expone `window.pear.execute()` vía preload.
 
+### MCP (agentes / Cursor / Claude)
+
+[`workers/pearledger-mcp.js`](../workers/pearledger-mcp.js) — mismas tools vía MCP stdio (`npm run mcp`). Guía: [`docs/MCP.md`](./MCP.md).  
+Contrato máquina (CDD): [`contracts/tools.contract.json`](../contracts/tools.contract.json). Tests: `npm run test:mcp`.  
+Separado de `workers/wdk-worker.js` (MCP oficial WDK).
+
 Guía equipo: [`docs/PHASE-B-INTEGRATION.md`](./PHASE-B-INTEGRATION.md).
 
 ---
