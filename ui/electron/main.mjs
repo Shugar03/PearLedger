@@ -1,33 +1,56 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+/**
+ * Proceso principal de Electron.
+ *
+ * Es un host más del mismo dashboard: sirve `dist/dashboard/web` y expone la
+ * misma fachada `window.pear` que la versión web, pero sobre IPC en vez de
+ * fetch/SSE. Un solo renderer para las dos superficies.
+ */
+
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
 import {
   ensureHarnessReady,
   executeTool,
   listTools,
   onHarnessEvent
-} from '../../dist/harness/ipc-bridge.js'
+} from '../../dist/ipc/bridge.js'
+import { ensurePdfRasterized } from '../../dist/plugins/invoice-ops/image-input.js'
+import { shutdownQvacRuntime } from '../../dist/plugins/invoice-ops/qvac-client.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const rendererDir = path.join(__dirname, '..', 'renderer')
+const here = path.dirname(fileURLToPath(import.meta.url))
+const rendererDir = path.join(here, '..', '..', 'dist', 'dashboard', 'web')
 
 let mainWindow = null
+const unsubscribers = []
 
-function sendHarnessEvent(payload) {
-  mainWindow?.webContents.send('pear:event', payload)
+function sendToRenderer(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('pear:event', payload)
+  }
 }
 
 async function initHarness() {
+  sendToRenderer({ type: 'harness:loading', tool: 'boot', payload: { models: false } })
   await ensureHarnessReady()
-  onHarnessEvent('tool:executing', (tool, params) => {
-    sendHarnessEvent({ type: 'tool:executing', tool: tool.name, params })
-  })
-  onHarnessEvent('tool:done', (tool, result) => {
-    sendHarnessEvent({ type: 'tool:done', tool: tool.name, result })
-  })
-  onHarnessEvent('tool:blocked', (tool, params) => {
-    sendHarnessEvent({ type: 'tool:blocked', tool: tool.name, params })
-  })
+  sendToRenderer({ type: 'harness:ready', tool: 'boot', payload: { models: true } })
+
+  const relay = (type) => (tool, payload) =>
+    sendToRenderer({ type, tool: tool?.name ?? String(tool), payload: safe(payload) })
+
+  for (const event of ['tool:executing', 'tool:done', 'tool:blocked', 'tool:failed']) {
+    unsubscribers.push(onHarnessEvent(event, relay(event)))
+  }
+}
+
+/** Descarta lo que no sobreviva a la serialización estructurada. */
+function safe(value) {
+  try {
+    return JSON.parse(JSON.stringify(value ?? null))
+  } catch {
+    return String(value)
+  }
 }
 
 function createWindow() {
@@ -37,46 +60,64 @@ function createWindow() {
     minWidth: 960,
     minHeight: 640,
     title: 'PearLedger',
+    backgroundColor: '#0f1115',
+    show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: path.join(here, 'preload.mjs'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   })
 
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
+  })
+
   mainWindow.loadFile(path.join(rendererDir, 'index.html'))
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
 }
 
-ipcMain.handle('pear:listTools', async () => {
-  await ensureHarnessReady()
-  return listTools().map((t) => ({
-    name: t.name,
-    plugin: t.plugin,
-    description: t.description
-  }))
-})
+ipcMain.handle('pear:listTools', async () => listTools())
 
 ipcMain.handle('pear:execute', async (_event, name, params = {}) => {
+  if (name === 'parse_invoice' && params && typeof params.filePath === 'string') {
+    const rasterized = await ensurePdfRasterized(params.filePath)
+    return executeTool(name, { ...params, filePath: rasterized })
+  }
   return executeTool(name, params)
 })
 
-ipcMain.handle('pear:pickPdf', async () => {
+ipcMain.handle('pear:pickInvoice', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Seleccionar factura PDF',
+    title: 'Seleccionar factura',
     properties: ['openFile'],
-    filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    filters: [
+      { name: 'Facturas', extensions: ['pdf', 'png', 'jpg', 'jpeg'] },
+      { name: 'Todos', extensions: ['*'] }
+    ]
   })
-  if (result.canceled || result.filePaths.length === 0) return null
-  return result.filePaths[0]
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
 })
 
 app.whenReady().then(async () => {
-  await initHarness()
+  process.env.PEARLEDGER_SERVICE_MODE = '1'
   createWindow()
+  await initHarness()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', (event) => {
+  event.preventDefault()
+  for (const off of unsubscribers.splice(0)) off()
+  shutdownQvacRuntime({ force: true })
+    .catch(() => undefined)
+    .finally(() => app.exit(0))
 })
 
 app.on('window-all-closed', () => {

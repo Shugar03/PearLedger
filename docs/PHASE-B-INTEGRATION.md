@@ -24,10 +24,10 @@ npm test
 
 | Archivo | Tool(s) |
 |---------|---------|
-| `workspace/plugins/plugin-invoice-ops/ocr.ts` | `parse_invoice` |
-| `workspace/plugins/plugin-invoice-ops/matcher.ts` | `match_purchase_order` |
-| `workspace/plugins/plugin-procurement-forecast/algorithm.ts` | `run_usage_forecast`, `check_inventory` |
-| `workspace/plugins/plugin-wdk-settlement/paymaster.ts` | `get_wallet_balance`, `quote_payment`, `execute_gasless_payment` |
+| `src/plugins/invoice-ops/ocr.ts` | `parse_invoice` |
+| `src/plugins/invoice-ops/matcher.ts` | `match_purchase_order` |
+| `src/plugins/procurement-forecast/algorithm.ts` | `run_usage_forecast`, `check_inventory` |
+| `src/plugins/wdk-settlement/paymaster.ts` | `get_wallet_balance`, `quote_payment`, `execute_gasless_payment` |
 
 **Contrato congelado:** `docs/PLUGIN_CONTRACT.md` — no renombrar tools ni cambiar params sin avisar.
 
@@ -44,11 +44,11 @@ npm run dev -- balance
 ```
 
 **Reglas:**
-- No editar `bin.mjs`, `harness/`, `app.js`, `ui/`
+- No editar `src/bin.ts`, `harness/`, `src/pear/app.ts`, `ui/`
 - `dryRun: false` explícito para txs reales
 - QVAC: structured output y tool calls en llamadas **separadas**
 
-**Merge:** PR pequeño por plugin → rebase sobre `main` → `npm test` debe seguir en 13/13.
+**Merge:** PR pequeño por plugin → rebase sobre `main` → `npm test` debe seguir en verde.
 
 ---
 
@@ -63,17 +63,17 @@ npm run ui:dev
 ```
 
 **Arquitectura:**
-- `ui/electron/main.mjs` — IPC → `dist/harness/ipc-bridge.js`
+- `ui/electron/main.mjs` — IPC → `dist/ipc/bridge.js`
 - `ui/electron/preload.mjs` — `window.pear.*` seguro
-- `ui/renderer/` — pantallas Inbox, Pagos, Forecast, Wallet
+- `src/dashboard/web/` — pantallas Inbox, Pagos, Forecast, Wallet (renderer unificado)
 
 **API disponible en renderer:**
 
 ```javascript
 await window.pear.listTools()
 await window.pear.execute('parse_invoice', { filePath: '...' })
-await window.pear.pickPdf()
-window.pear.onEvent(({ type, tool, result }) => { /* ... */ })
+await window.pear.pickInvoice()
+window.pear.onEvent(({ type, tool, payload }) => { /* ... */ })
 ```
 
 **MVP hackathon (must):**
@@ -98,8 +98,8 @@ window.pear.onEvent(({ type, tool, result }) => { /* ... */ })
 
 ## Checklist integración E2E
 
-- [ ] Antony: `parse_invoice` retorna JSON usable por UI *(requiere `npm run models:download`)*
+- [x] Antony: `parse_invoice` retorna JSON usable por UI *(requiere `npm run models:download`)*
 - [x] Antony: `pay` dry-run OK en Sepolia/mainnet stub *(código en main; smoke CLI OK)*
-- [ ] Evelin: Inbox procesa PDF real vía `window.pear.execute`
+- [x] Evelin: Inbox procesa PDF/PNG vía `window.pear.execute` (Electron rasteriza PDF automáticamente)
 - [x] Evelin: Modal confirmación >$1k con `confirmed: true` *(scaffold en `ui/`)*
-- [ ] Demo: CLI (jurado técnico) + UI 30–60 s (jurado producto)
+- [x] Demo: CLI (jurado técnico) + UI 30–60 s (jurado producto) con fixture `workspace/invoices/sample.png`

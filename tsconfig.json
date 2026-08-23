@@ -1,20 +1,77 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "types": [
+      "node"
+    ],
+    "rootDir": "src",
     "outDir": "dist",
-    "rootDir": ".",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": false,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@plugins/*": [
+        "src/plugins/*"
+      ],
+      "@cli/*": [
+        "src/cli/*"
+      ],
+      "@dashboard/*": [
+        "src/dashboard/*"
+      ],
+      "@ipc/*": [
+        "src/ipc/*"
+      ],
+      "@workers/*": [
+        "src/workers/*"
+      ],
+      "@pear/*": [
+        "src/pear/*"
+      ],
+      "@assets/*": [
+        "src/assets/*"
+      ]
+    }
   },
   "include": [
-    "harness/**/*.ts",
-    "workspace/plugins/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.json"
   ],
-  "exclude": ["node_modules", "dist", "out"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out",
+    "ui",
+    "vendor",
+    "src/dashboard/web"
+  ],
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "verbose": false
+  }
 }

@@ -3,18 +3,19 @@ name: Pear CI
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pear-ci
+  group: pear-ci-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build TypeScript + Bare linux-x64
+  verify:
+    name: Tipos, convenciones y tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -24,73 +25,173 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.18'
+          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Compile harness + plugins
-        run: npm run build:ts
+      - name: Compilar (tsc + tsc-alias)
+        run: npm run build
 
-      - name: Lint TypeScript
+      - name: Typecheck estricto
         run: npm run lint
 
-      - name: Test harness (SDD/TDD)
-        run: npm test
+      # Verifica mecánicamente CONVENTIONS.md: sin `../`, sin console en src/,
+      # sin process.cwd(), env sólo en la capa de config, y todo builtin `node:`
+      # mapeado en `imports` para que el binario Bare no muera con MODULE_NOT_FOUND.
+      - name: Convenciones del proyecto
+        run: npm run lint:rules
 
-      - name: Build linux-x64 binary
-        run: npm run make:linux-x64
+      # El glob, y no `node --test dist/`: desde Node 24 un directorio se
+      # resuelve como módulo y el paso muere con MODULE_NOT_FOUND.
+      - name: Tests
+        run: node --test "dist/**/*.test.js"
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: pearledger-linux-x64
-          path: out/linux-x64/
-          if-no-files-found: warn
+      - name: Auditoría de dependencias
+        run: npm audit --audit-level=high
 
-  stage:
-    name: Stage pear:// release
+  smoke-bare:
+    name: Arranque bajo Bare
     runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 30
-    permissions:
-      contents: write
-      pull-requests: write
+    needs: verify
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.18'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
 
-      - name: Install dependencies
-        run: npm ci
+      # El bug que este paso existe para atrapar: el CLI arrancaba bajo Node y
+      # fallaba bajo Bare con MODULE_NOT_FOUND porque faltaban builtins en el
+      # mapa `imports`. Node solo no lo detecta.
+      - name: pearledger tools bajo Bare (ambos órdenes de flags)
+        run: |
+          ./node_modules/bare/bin/bare dist/bin.js --no-updates --json tools > /tmp/a.json
+          ./node_modules/bare/bin/bare dist/bin.js --no-updates tools --json > /tmp/b.json
+          node -e "
+            const fs=require('fs');
+            for (const f of ['/tmp/a.json','/tmp/b.json']) {
+              const t=JSON.parse(fs.readFileSync(f,'utf8'));
+              if (t.tools.length !== 8) { console.error(f,'esperaba 8 tools, hubo',t.tools.length); process.exit(1) }
+            }
+            console.log('Bare OK — 8 tools, stdout es JSON válido en ambos órdenes');
+          "
 
-      - name: Compile TypeScript
-        run: npm run build:ts
+      - name: La app funciona fuera de su directorio
+        run: |
+          cd /tmp
+          node "$GITHUB_WORKSPACE/dist/dev.js" forecast --json | node -e "
+            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const r=JSON.parse(s);
+              if(!Array.isArray(r.forecasts)) { console.error('forecast inválido'); process.exit(1) }
+              console.log('cwd-independiente OK —',r.forecasts.length,'SKUs');
+            })"
 
-      - name: Download linux-x64 binary
-        uses: actions/download-artifact@v4
+  build-binary:
+    name: Binario standalone linux-x64
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run make:linux-x64
+
+      - name: El binario arranca
+        run: ./out/linux-x64/pearledger --json tools
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pearledger-linux-x64
+          path: out/linux-x64/
+          if-no-files-found: error
+
+  build-binary-win:
+    name: Binario standalone win32-x64
+    runs-on: windows-latest
+    needs: verify
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run make:win32-x64
+
+      - name: El binario arranca
+        shell: pwsh
+        run: ./out/win32-x64/pearledger.exe --no-updates --json tools
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pearledger-win32-x64
+          path: out/win32-x64/
+          if-no-files-found: error
+
+  stage:
+    name: Publicar release pear://
+    runs-on: ubuntu-latest
+    needs: [smoke-bare, build-binary, build-binary-win]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/download-artifact@v4
         with:
           name: pearledger-linux-x64
           path: out/linux-x64/
 
-      - name: Prepare pear-stage (A1 — sin .git/tests)
-        run: npm run pear:stage:prepare
+      - uses: actions/download-artifact@v4
+        with:
+          name: pearledger-win32-x64
+          path: out/win32-x64/
 
-      - name: Stage with pear-ci
+      # Flujo oficial de Pear v3: `pear build` arma el deployment dir
+      # (package.json + by-arch/<host>/app/<bin>) y `pear stage` publica ESE
+      # directorio, no el árbol de fuentes. El drive OTA lleva binarios, no JS:
+      # el código ya viaja dentro del ejecutable.
+      #
+      # El nombre del comando que `pear install` crea sale de las CLAVES de
+      # `bin` en package.json — por eso es `{"pearledger": "./dist/bin.js"}` y
+      # coincide con `bare-build --name pearledger`.
+      - name: Preparar deployment dir
+        run: |
+          chmod +x out/linux-x64/pearledger
+          chmod +x out/win32-x64/pearledger.exe || true
+          npx pear build --target ../pearledger-deployment
+          ls -R ../pearledger-deployment | head -30
+
+      - name: Stage con pear-ci
         uses: holepunchto/actions/pear-ci@main
         with:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           namespace: pearledger
-          target: pear-stage
-          dry-run: false
+          target: ../pearledger-deployment
+          dry-run: ${{ github.event_name == 'pull_request' }}
 
-      - name: Verify upgrade link
-        run: |
-          node -e "
-            const pkg = require('./package.json');
-            console.log('upgrade link:', pkg.upgrade);
-          "
+      - name: Validar release (pear info)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: npx pear info pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pearledger-deployment
+          path: ../pearledger-deployment/
+          if-no-files-found: error

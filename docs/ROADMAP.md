@@ -26,7 +26,7 @@
 
 ## [12:00 – 18:00] Plugins & Harness
 
-- [ ] Integrar harness en `bin.mjs` routing
+- [ ] Integrar harness en `src/bin.ts` routing
 - [ ] `plugin-invoice-ops`: OCR + RAG + Zod
 - [ ] `plugin-procurement-forecast`: forecast + draft PO
 - [ ] `plugin-wdk-settlement`: balance + pay + hook >$1k
@@ -45,5 +45,5 @@
 - [ ] Video demo 3 min (script en README principal)
 - [ ] Permalinks verificados por track
 - [ ] Checklist jurado completo
-- [ ] Publicar `pear://<key>` estable vía pear-ci
+- [ ] Publicar `pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o` estable vía pear-ci (ver `docs/PEAR-OTA.md`)
 - [ ] Documentar hardware/modelos usados
