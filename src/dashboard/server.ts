@@ -98,7 +98,7 @@ function isAddressInUse(err: unknown): boolean {
 export async function startDashboard(
   options: StartDashboardOptions = {}
 ): Promise<DashboardHandle> {
-  process.env.PEARLEDGER_SERVICE_MODE = '1'
+  process.env.PEARLEDGER_SERVICE_MODE = '1' // conventions:allow — el dashboard puebla el flag de servicio antes de getConfig
   resetConfig()
 
   const log = getLogger('dashboard')
