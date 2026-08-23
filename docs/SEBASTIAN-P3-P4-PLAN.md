@@ -93,7 +93,8 @@ git checkout variant/daemon
 pear touch                    # mint pear://<key>
 ```
 
-- [x] Pear CLI v3.2.0 instalado (`C:\Users\Facundo\AppData\Local\Programs\pear\pear.exe`)
+- [x] Pear CLI v3.2.0 instalado (ruta local de Pear en el host de desarrollo)
+
 - [x] Key: `pear://48oa46fuax77q7973h33kuj5ywp1m9obw71fcu78rhptisjs3hoy` en `package.json` + `pear.config.json`
 - [x] Smoke: `npm run dev -- tools --json` → 8 tools
 
