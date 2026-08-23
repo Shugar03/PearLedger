@@ -129,9 +129,23 @@ jobs:
       - run: npm run build
       - run: npm run make:win32-x64
 
+      # WDK trae bare-tls bajo 4 niveles de node_modules; con el path del
+      # runner de Actions eso supera MAX_PATH (260) al cargar el .node nativo:
+      # "The filename or extension is too long." Long paths + exe en C:\pl\
+      # mantienen el smoke sin aplanar dependencias.
+      - name: Habilitar long paths de Windows
+        shell: pwsh
+        run: |
+          New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' `
+            -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force | Out-Null
+          git config --system core.longpaths true
+
       - name: El binario arranca
         shell: pwsh
-        run: ./out/win32-x64/pearledger.exe --no-updates --json tools
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\pl | Out-Null
+          Copy-Item -Force .\out\win32-x64\pearledger.exe C:\pl\pearledger.exe
+          & C:\pl\pearledger.exe --no-updates --json tools
 
       - uses: actions/upload-artifact@v4
         with:
