@@ -4,6 +4,7 @@ import { Card } from '@dashboard/components/Card'
 import { Icon } from '@dashboard/components/Icon'
 import { JsonBlock } from '@dashboard/components/JsonBlock'
 import { Kpi } from '@dashboard/components/Kpi'
+import { Notice } from '@dashboard/components/Notice'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
 import { useToolResult } from '@dashboard/hooks/useToolResult'
@@ -12,7 +13,7 @@ import type { WalletBalance } from '@dashboard/lib/types'
 export function WalletView(): ReactNode {
   const { runTool, balance, setBalance } = usePear()
   const { t } = usePrefs()
-  const { result, pending, run } = useToolResult()
+  const { result, problem, pending, run } = useToolResult()
 
   function refresh(): void {
     void run(async () => {
@@ -53,6 +54,7 @@ export function WalletView(): ReactNode {
             </button>
           </div>
 
+          {problem ? <Notice problem={problem} /> : null}
           <JsonBlock value={result} />
         </div>
       </Card>

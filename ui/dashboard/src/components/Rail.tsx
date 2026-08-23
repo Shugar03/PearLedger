@@ -1,76 +1,46 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
-import { Icon, type IconName } from '@dashboard/components/Icon'
-import type { ActivityEntry } from '@dashboard/context/pear-context'
+import { Icon } from '@dashboard/components/Icon'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
-import type { Dict } from '@dashboard/i18n'
+import { isAlert, lookOf, reasonOf, timeOf } from '@dashboard/lib/activity'
 
 /** Cuántos círculos entran sin que la rejilla empiece a scrollear. */
-const BADGES = 35
+const BADGES = 32
 
-/** Cuántas filas de la tabla se muestran. */
-const ROWS = 7
-
-interface Look {
-  badge: string
-  icon: IconName
-  pill: string
-  label: keyof Dict['state']
-}
-
-const STATE: Record<string, Look> = {
-  'tool:done': { badge: 'badge badge--done', icon: 'check', pill: 'pill pill--ok', label: 'done' },
-  'tool:executing': {
-    badge: 'badge badge--running',
-    icon: 'play',
-    pill: 'pill pill--wait',
-    label: 'running'
-  },
-  'tool:blocked': {
-    badge: 'badge badge--blocked',
-    icon: 'close',
-    pill: 'pill pill--warn',
-    label: 'blocked'
-  },
-  'tool:failed': {
-    badge: 'badge badge--failed',
-    icon: 'close',
-    pill: 'pill pill--warn',
-    label: 'failed'
-  },
-  'tool:registered': { badge: 'badge', icon: 'check', pill: 'pill', label: 'registered' }
-}
-
-function lookOf(entry: ActivityEntry): Look {
-  return STATE[entry.event.type] ?? STATE['tool:registered']!
-}
-
-function isAlert(entry: ActivityEntry): boolean {
-  return entry.event.type === 'tool:blocked' || entry.event.type === 'tool:failed'
-}
+/** Ejecuciones por página de la tabla. */
+const PAGE = 6
 
 /**
  * Riel derecho: el pulso del harness.
  *
  * Arriba, un círculo por ejecución — lima la que terminó, coral la que falló o
- * quedó bloqueada, celeste la que está corriendo. Abajo, las últimas con su
- * hora y su plugin.
+ * quedó bloqueada, celeste la que está corriendo. Abajo, la tabla paginada:
+ * las ejecuciones se acumulan durante toda la sesión y sin páginas la tarjeta
+ * crecería sin fin o escondería todo lo viejo.
  */
 export function Rail({ alertsOnly }: { alertsOnly: boolean }): ReactNode {
   const { events, counters, clearActivity } = usePear()
   const { t, locale } = usePrefs()
   const [onlyAlerts, setOnlyAlerts] = useState(alertsOnly)
+  const [page, setPage] = useState(0)
 
   const shown = onlyAlerts ? events.filter(isAlert) : events
   const alerts = counters['tool:blocked'] + counters['tool:failed']
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE))
 
-  const time = (entry: ActivityEntry): string => {
-    const at = entry.event.at ? new Date(entry.event.at) : new Date()
-    return Number.isNaN(at.getTime())
-      ? ''
-      : at.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+  // Al filtrar, al limpiar o cuando la lista se acorta, la página actual puede
+  // quedar fuera de rango: se vuelve a la última que existe.
+  useEffect(() => {
+    setPage((current) => Math.min(current, pages - 1))
+  }, [pages])
+
+  function filter(next: boolean): void {
+    setOnlyAlerts(next)
+    setPage(0)
   }
+
+  const slice = shown.slice(page * PAGE, page * PAGE + PAGE)
 
   return (
     <div className="rail">
@@ -80,7 +50,7 @@ export function Rail({ alertsOnly }: { alertsOnly: boolean }): ReactNode {
           <button
             type="button"
             className={onlyAlerts ? 'pill pill--ink' : 'pill'}
-            onClick={() => setOnlyAlerts((value) => !value)}
+            onClick={() => filter(!onlyAlerts)}
           >
             {onlyAlerts ? t.rail.alertsOnly(alerts) : t.rail.session(events.length)}
           </button>
@@ -92,11 +62,14 @@ export function Rail({ alertsOnly }: { alertsOnly: boolean }): ReactNode {
           <div className="grid-badges">
             {shown.slice(0, BADGES).map((entry) => {
               const look = lookOf(entry)
+              const reason = reasonOf(entry)
               return (
                 <span
                   key={entry.key}
                   className={look.badge}
-                  title={`${entry.event.tool ?? t.common.none} · ${t.state[look.label]}`}
+                  title={[entry.event.tool ?? t.common.none, t.state[look.label], reason]
+                    .filter(Boolean)
+                    .join(' · ')}
                 >
                   <Icon name={look.icon} size={13} />
                 </span>
@@ -129,36 +102,71 @@ export function Rail({ alertsOnly }: { alertsOnly: boolean }): ReactNode {
         {shown.length === 0 ? (
           <p className="empty">{t.rail.emptyTable}</p>
         ) : (
-          <div className="rail__scroll">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">{t.rail.colTime}</th>
-                  <th scope="col">{t.rail.colTool}</th>
-                  <th scope="col">{t.rail.colState}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.slice(0, ROWS).map((entry) => {
-                  const look = lookOf(entry)
-                  return (
-                    <tr key={entry.key}>
-                      <td className="table__time">{time(entry)}</td>
-                      <td>
-                        <span className="table__tool">{entry.event.tool ?? t.common.none}</span>
-                        {entry.event.plugin ? (
-                          <span className="table__plugin">{entry.event.plugin}</span>
-                        ) : null}
-                      </td>
-                      <td>
-                        <span className={look.pill}>{t.state[look.label]}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="rail__scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t.rail.colTime}</th>
+                    <th scope="col">{t.rail.colTool}</th>
+                    <th scope="col">{t.rail.colState}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slice.map((entry) => {
+                    const look = lookOf(entry)
+                    const reason = reasonOf(entry)
+                    return (
+                      <tr key={entry.key}>
+                        <td className="table__time">{timeOf(entry, locale)}</td>
+                        <td>
+                          <span className="table__tool">{entry.event.tool ?? t.common.none}</span>
+                          {entry.event.plugin ? (
+                            <span className="table__plugin">{entry.event.plugin}</span>
+                          ) : null}
+                          {reason ? (
+                            <span className="table__reason" title={reason}>
+                              {reason}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td>
+                          <span className={look.pill}>{t.state[look.label]}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pager">
+              <span className="pager__count">
+                {t.rail.range(page * PAGE + 1, page * PAGE + slice.length, shown.length)}
+              </span>
+              <div className="pager__controls">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setPage((current) => Math.max(0, current - 1))}
+                  disabled={page === 0}
+                  aria-label={t.rail.previous}
+                >
+                  <Icon name="chevronLeft" size={15} />
+                </button>
+                <span className="pager__page">{t.rail.page(page + 1, pages)}</span>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setPage((current) => Math.min(pages - 1, current + 1))}
+                  disabled={page >= pages - 1}
+                  aria-label={t.rail.next}
+                >
+                  <Icon name="chevronRight" size={15} />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </section>
     </div>

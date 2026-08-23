@@ -48,8 +48,15 @@ async function initHarness() {
   }
 }
 
-/** Descarta lo que no sobreviva a la serialización estructurada. */
+/**
+ * Descarta lo que no sobreviva a la serialización estructurada.
+ *
+ * Un `Error` se serializa como `{}` — sus campos no son enumerables —, así que
+ * el motivo de un `tool:failed` llegaba vacío al renderer. Se extrae a mano,
+ * igual que hace el hub SSE del dev server.
+ */
 function safe(value) {
+  if (value instanceof Error) return { error: value.message }
   try {
     return JSON.parse(JSON.stringify(value ?? null))
   } catch {

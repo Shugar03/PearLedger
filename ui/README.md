@@ -55,6 +55,32 @@ ejecución y una tabla con las últimas.
 El estado del stream sólo aparece cuando hay algo que decir: "en vivo" era ruido
 permanente, "reconectando" y "sin stream" sí piden atención.
 
+### Cuando algo sale mal
+
+El motivo se muestra en los tres sitios donde hace falta, y nunca sólo en la
+consola:
+
+- **En la vista**, como aviso coral encima del volcado (`components/Notice.tsx`).
+  Un `{ error }` devuelto cuenta igual que una excepción, y un resultado
+  `blocked` sale como aviso celeste con la razón del hook.
+- **En el riel**, bajo el nombre de la tool, recortado a dos líneas con el texto
+  completo en el `title`.
+- **En la cabecera**, que dice qué tool falló — no "harness no disponible", que
+  es otra cosa — con el motivo en el `title`.
+
+De dónde sale cada uno está en `lib/activity.ts`: `tool:failed` manda el error
+serializado y `tool:blocked` manda los params del hook, donde el texto humano
+vive en `message`.
+
+### Paginación de la actividad
+
+Las ejecuciones se acumulan durante toda la sesión, así que la tabla del riel
+va paginada de a seis, con el rango a la izquierda (`1-6 de 22`) y la página a
+la derecha. Filtrar por alertas vuelve a la primera página, y si la lista se
+acorta — al limpiar, por ejemplo — la página actual se ajusta sola en vez de
+quedar en blanco. El provider guarda como mucho 120 eventos: la memoria no
+crece indefinidamente aunque la sesión dure horas.
+
 La fila de la barra lateral dice **Harness**, no "Modelos": lo que sigue es si
 el harness respondió, y cuando falla — dos instancias peleando por el lock del
 worker, por ejemplo — el motivo real no eran los modelos. El mensaje que se

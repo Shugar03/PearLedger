@@ -17,6 +17,7 @@ export type StatusCode =
   | 'failed'
   | 'cancelled'
   | 'policy'
+  | 'toolFailed'
   | 'error'
 
 export interface Status {
@@ -25,6 +26,8 @@ export interface Status {
   tone: 'idle' | 'busy' | 'error'
   /** El dato del mensaje: nombre de tool, cantidad, nota del servidor. */
   detail?: string | number
+  /** Texto crudo para el `title`: el motivo tal como lo dio el harness. */
+  hint?: string
 }
 
 export const READY: Status = { code: 'idle', tone: 'idle' }
@@ -35,6 +38,7 @@ export function statusText(status: Status, t: Dict): string {
   if (code === 'ready') return t.status.ready(Number(detail ?? 0))
   if (code === 'running') return t.status.running(String(detail ?? ''))
   if (code === 'policy') return t.status.policy(String(detail ?? ''))
+  if (code === 'toolFailed') return t.status.toolFailed(String(detail ?? ''))
   if (code === 'error') return t.status.error
   return t.status[code]
 }
@@ -47,5 +51,6 @@ export function statusText(status: Status, t: Dict): string {
  * es lo único que dice si el problema fue un lock, un puerto o un modelo.
  */
 export function statusDetail(status: Status): string | undefined {
+  if (status.hint) return status.hint
   return status.code === 'error' && status.detail ? String(status.detail) : undefined
 }

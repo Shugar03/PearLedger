@@ -56,6 +56,7 @@ export const en: Dict = {
     failed: 'The tool failed',
     cancelled: 'Simulation cancelled',
     policy: (note: string) => `Server policy: ${note}`,
+    toolFailed: (tool: string) => `${tool} failed`,
     error: 'Harness unavailable'
   },
 
@@ -73,7 +74,11 @@ export const en: Dict = {
     colTime: 'Time',
     colTool: 'Tool',
     colState: 'State',
-    emptyTable: 'No runs yet.'
+    emptyTable: 'No runs yet.',
+    page: (current: number, total: number) => `${current} / ${total}`,
+    range: (from: number, to: number, total: number) => `${from}-${to} of ${total}`,
+    previous: 'Previous runs',
+    next: 'Next runs'
   },
 
   state: {
@@ -223,6 +228,9 @@ export const en: Dict = {
 
   common: {
     raw: 'Harness response',
+    failed: 'Failed:',
+    blocked: 'Blocked:',
+    noReason: 'the harness gave no reason.',
     none: '—'
   }
 }

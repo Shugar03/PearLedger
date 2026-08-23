@@ -5,6 +5,7 @@ import { Card } from '@dashboard/components/Card'
 import { Field, FieldSlot } from '@dashboard/components/Field'
 import { Icon } from '@dashboard/components/Icon'
 import { JsonBlock } from '@dashboard/components/JsonBlock'
+import { Notice } from '@dashboard/components/Notice'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
 import { useToolResult } from '@dashboard/hooks/useToolResult'
@@ -41,7 +42,7 @@ function totalOf(invoice: ParsedInvoice, t: Dict): string {
 export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNode {
   const { bridge, runTool, setStatus, recordIngest } = usePear()
   const { t } = usePrefs()
-  const { result, pending, run } = useToolResult()
+  const { result, problem, pending, run } = useToolResult()
 
   const [filePath, setFilePath] = useState(quick?.path ?? '')
   const [stage, setStage] = useState<Stage>('idle')
@@ -179,6 +180,7 @@ export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNod
           {stage === 'idle' && !result ? (
             <p className="placeholder">{t.invoices.resultEmpty}</p>
           ) : null}
+          {problem ? <Notice problem={problem} /> : null}
           <JsonBlock value={result} />
         </div>
       </Card>

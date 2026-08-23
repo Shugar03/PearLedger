@@ -769,6 +769,95 @@ body {
   font-size: 0.7rem;
 }
 
+/* El motivo de un fallo o un bloqueo. Se recorta a dos líneas: el texto
+   completo queda en el `title`, que es donde se lee sin romper la tabla. */
+.table__reason {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--coral-text);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+/* ── Aviso de fallo ──────────────────────────────────────────────────────── */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 13px 15px;
+  border-radius: var(--r-panel);
+  font-size: 0.83rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  animation: rise 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.notice svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.notice--error {
+  background: var(--coral-soft);
+  color: var(--coral-ink);
+}
+
+.notice--warn {
+  background: var(--sky-soft);
+  color: var(--sky-ink);
+}
+
+/* ── Paginador ───────────────────────────────────────────────────────────── */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.pager__count {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.pager__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pager__page {
+  min-width: 46px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-btn:disabled:hover {
+  background: var(--surface);
+}
+
+.icon-btn:disabled:hover svg {
+  transform: none;
+}
+
 /* ── Formularios ─────────────────────────────────────────────────────────── */
 
 .fields {

@@ -163,7 +163,9 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
         setStatus(READY)
         return result
       } catch (err) {
-        setStatus({ code: 'error', tone: 'error', detail: messageOf(err) })
+        // El harness sigue vivo: lo que falló fue esta tool, y el motivo va al
+        // `title` de la píldora en vez de perderse.
+        setStatus({ code: 'toolFailed', tone: 'error', detail: name, hint: messageOf(err) })
         throw err
       }
     },

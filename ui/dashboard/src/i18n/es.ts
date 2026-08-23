@@ -63,6 +63,7 @@ export const es = {
     failed: 'La tool falló',
     cancelled: 'Simulación cancelada',
     policy: (note: string) => `Política del servidor: ${note}`,
+    toolFailed: (tool: string) => `Falló ${tool}`,
     error: 'Harness no disponible'
   },
 
@@ -80,7 +81,11 @@ export const es = {
     colTime: 'Hora',
     colTool: 'Tool',
     colState: 'Estado',
-    emptyTable: 'Sin ejecuciones todavía.'
+    emptyTable: 'Sin ejecuciones todavía.',
+    page: (current: number, total: number) => `${current} / ${total}`,
+    range: (from: number, to: number, total: number) => `${from}-${to} de ${total}`,
+    previous: 'Ejecuciones anteriores',
+    next: 'Ejecuciones siguientes'
   },
 
   state: {
@@ -231,6 +236,9 @@ export const es = {
 
   common: {
     raw: 'Respuesta del harness',
+    failed: 'Falló:',
+    blocked: 'Bloqueada:',
+    noReason: 'el harness no dio un motivo.',
     none: '—'
   }
 }

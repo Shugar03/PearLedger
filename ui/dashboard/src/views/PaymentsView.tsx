@@ -5,6 +5,7 @@ import { ConfirmDialog } from '@dashboard/components/ConfirmDialog'
 import { Field } from '@dashboard/components/Field'
 import { JsonBlock } from '@dashboard/components/JsonBlock'
 import { Kpi } from '@dashboard/components/Kpi'
+import { Notice } from '@dashboard/components/Notice'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
 import { useToolResult } from '@dashboard/hooks/useToolResult'
@@ -18,7 +19,7 @@ interface PendingConfirm {
 export function PaymentsView(): ReactNode {
   const { runTool, setStatus } = usePear()
   const { t, locale } = usePrefs()
-  const { result, pending, run } = useToolResult()
+  const { result, problem, pending, run } = useToolResult()
 
   const [vendor, setVendor] = useState('')
   const [amount, setAmount] = useState('250')
@@ -129,6 +130,7 @@ export function PaymentsView(): ReactNode {
       <Card title={t.payments.resultTitle}>
         <div className="card__body">
           {result ? null : <p className="placeholder">{t.payments.resultEmpty}</p>}
+          {problem ? <Notice problem={problem} /> : null}
           <JsonBlock value={result} />
         </div>
       </Card>

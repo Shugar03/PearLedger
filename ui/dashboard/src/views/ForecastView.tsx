@@ -4,6 +4,7 @@ import { Card } from '@dashboard/components/Card'
 import { Field } from '@dashboard/components/Field'
 import { JsonBlock } from '@dashboard/components/JsonBlock'
 import { MeterRow } from '@dashboard/components/MeterRow'
+import { Notice } from '@dashboard/components/Notice'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
 import { useToolResult } from '@dashboard/hooks/useToolResult'
@@ -15,7 +16,7 @@ type Mode = 'forecast' | 'inventory'
 export function ForecastView(): ReactNode {
   const { runTool } = usePear()
   const { t, locale } = usePrefs()
-  const { result, pending, run } = useToolResult()
+  const { result, problem, pending, run } = useToolResult()
 
   const [sku, setSku] = useState('')
   const [days, setDays] = useState('30')
@@ -84,6 +85,7 @@ export function ForecastView(): ReactNode {
           {result && (!rows || rows.length === 0) ? (
             <p className="placeholder">{t.forecast.emptyRows}</p>
           ) : null}
+          {problem ? <Notice problem={problem} /> : null}
           <JsonBlock value={result} />
         </div>
       </Card>
