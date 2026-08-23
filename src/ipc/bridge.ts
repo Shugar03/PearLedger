@@ -15,7 +15,7 @@ import { createHarness, type Harness } from '@core/harness.js'
 import { loadPlugins } from '@core/loader.js'
 import { getConfig } from '@config/index.js'
 import { ensurePurchaseOrderIndex } from '@plugins/invoice-ops/matcher.js'
-import { preloadQvacModels } from '@plugins/invoice-ops/qvac-client.js'
+import { preloadQvacModels, warmDoctrForService } from '@plugins/invoice-ops/qvac-client.js'
 import type { HarnessEvent, ToolDescriptor, ToolParams } from '@core/types.js'
 
 /**
@@ -30,6 +30,8 @@ async function bootstrapHarness(): Promise<Harness> {
   if (getConfig().service.mode) {
     await preloadQvacModels()
     await ensurePurchaseOrderIndex()
+    // Tras el índice RAG: embeddings ya no hacen falta pinneados; DocTR sí.
+    await warmDoctrForService()
   }
   return harness
 }

@@ -17,12 +17,13 @@ export interface FastParseResult {
 
 
 const DATE_ISO = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/
+const DATE_YMD = /\b(\d{4})-(\d{2})-(\d{2})\b/
 const DATE_SPANISH =
   /\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?(\d{4})\b/i
-const DATE_FECHA = /fecha[:\s]+(.+)/i
+const DATE_FECHA = /(?:fecha|date)\s*[:\-]\s*(.+)/i
 
 const TABLE_HEADER =
-  /descripci[oó]n|precio|cantidad|total|horas|hora|monto|subtotal/i
+  /descripci[oó]n|description|precio|price|cantidad|qty|quantity|total|horas|hora|monto|subtotal/i
 const TOTAL_ROW = /^total\b/i
 const SUBTOTAL_ROW = /sub-?total/i
 const TAX_ROW = /(?:impuesto|descuento|tax|iva)\b/i
@@ -67,10 +68,18 @@ function extractInvoiceNumber(lines: string[]): string | null {
 function extractDate(lines: string[]): string {
   for (const line of lines.slice(0, 20)) {
     const fecha = line.match(DATE_FECHA)
-    if (fecha?.[1]) return fecha[1].trim()
+    if (fecha?.[1]) {
+      const rest = fecha[1].trim()
+      const ymd = rest.match(DATE_YMD)
+      if (ymd) return `${ymd[1]}-${ymd[2]}-${ymd[3]}`
+      return rest
+    }
 
     const es = line.match(DATE_SPANISH)
     if (es) return `${es[1]} de ${es[2]} de ${es[3]}`
+
+    const ymd = line.match(DATE_YMD)
+    if (ymd) return `${ymd[1]}-${ymd[2]}-${ymd[3]}`
 
     const iso = line.match(DATE_ISO)
     if (iso) return line.trim()
@@ -79,10 +88,21 @@ function extractDate(lines: string[]): string {
 }
 
 function extractVendor(lines: string[]): string {
+  for (const line of lines.slice(0, 16)) {
+    const labeled = line.match(
+      /(?:vendor|proveedor|supplier|from|de)\s*[:\-]\s*(.+)/i
+    )
+    if (labeled?.[1]) {
+      const name = labeled[1].trim()
+      if (name.length >= 2 && name.length <= 80) return name
+    }
+  }
+
   const candidates: string[] = []
   for (const line of lines.slice(0, 12)) {
     if (TABLE_HEADER.test(line) || SKIP_VENDOR.test(line)) continue
     if (/^\d+$/.test(line)) continue
+    if (/(?:invoice|factura|po\s*reference|currency|date|fecha)\b/i.test(line)) continue
     if (line.length < 2 || line.length > 60) continue
     candidates.push(line)
   }
@@ -100,12 +120,39 @@ function amountsInLine(line: string): number[] {
   return out
 }
 
+/** Elige qty/unit cuando hay 3 montos: ambos órdenes (qty×price) pueden cuadrar. */
+function pickQuantityAndUnit(
+  a: number,
+  b: number,
+  total: number
+): { quantity: number; unitPrice: number } {
+  const tol = Math.max(0.02, total * 0.05)
+  const productOk = Math.abs(a * b - total) <= tol
+
+  if (!productOk) {
+    // Asumir orden qty, unit, total (inglés / tabular SME).
+    return { quantity: a, unitPrice: b }
+  }
+
+  const aInt = Math.abs(a - Math.round(a)) < 0.01
+  const bInt = Math.abs(b - Math.round(b)) < 0.01
+
+  if (aInt && !bInt) return { quantity: a, unitPrice: b }
+  if (bInt && !aInt) return { quantity: b, unitPrice: a }
+  if (aInt && bInt) {
+    // Ambos enteros: la cantidad suele ser la menor (1 × 100, no 100 × 1).
+    return a <= b ? { quantity: a, unitPrice: b } : { quantity: b, unitPrice: a }
+  }
+
+  return { quantity: a, unitPrice: b }
+}
+
 function extractLineItems(lines: string[]): Invoice['lineItems'] {
   const items: Invoice['lineItems'] = []
   let inTable = false
 
   for (const line of lines) {
-    if (TABLE_HEADER.test(line) && /precio|total|cantidad|horas/i.test(line)) {
+    if (TABLE_HEADER.test(line) && /precio|price|total|cantidad|qty|quantity|horas/i.test(line)) {
       inTable = true
       continue
     }
@@ -122,9 +169,20 @@ function extractLineItems(lines: string[]): Invoice['lineItems'] {
     if (desc.length < 2) continue
 
     const total = amounts[amounts.length - 1]!
-    const unitPrice = amounts.length >= 3 ? amounts[amounts.length - 3]! : amounts[0]!
-    const quantity =
-      amounts.length >= 3 ? amounts[amounts.length - 2]! : amounts.length === 2 ? 1 : 1
+    let quantity: number
+    let unitPrice: number
+    if (amounts.length >= 3) {
+      const picked = pickQuantityAndUnit(
+        amounts[amounts.length - 3]!,
+        amounts[amounts.length - 2]!,
+        total
+      )
+      quantity = picked.quantity
+      unitPrice = picked.unitPrice
+    } else {
+      quantity = 1
+      unitPrice = amounts[0]!
+    }
 
     items.push({
       description: desc,

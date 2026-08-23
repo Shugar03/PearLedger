@@ -80,6 +80,30 @@ describe('fastParseInvoice', () => {
     assert.ok(result)
     assert.equal(result.invoice.total, 400)
     assert.equal(result.invoice.invoiceNumber, 'INV-2026-042')
+    assert.equal(result.invoice.vendor, 'Global Parts Ltd')
+  })
+
+  it('extrae fixture demo alineado a PO-2026-001', () => {
+    const demo = `INVOICE
+Invoice #INV-001
+Vendor: Proveedor Demo S.A.
+Date: 2026-08-15
+PO Reference: PO-2026-001
+Currency: USD
+Description                Qty   Unit Price   Total
+Material de oficina          1       100.00  100.00
+Subtotal: 100.00
+Tax: 0.00
+TOTAL: 100.00 USD`
+    const result = fastParseInvoice(demo, { minConfidence: 0.6 })
+    assert.ok(result)
+    assert.equal(result.invoice.invoiceNumber, 'INV-001')
+    assert.equal(result.invoice.vendor, 'Proveedor Demo S.A.')
+    assert.equal(result.invoice.total, 100)
+    assert.equal(result.invoice.date, '2026-08-15')
+    assert.equal(result.invoice.lineItems.length, 1)
+    assert.equal(result.invoice.lineItems[0]?.quantity, 1)
+    assert.equal(result.invoice.lineItems[0]?.unitPrice, 100)
   })
 
   it('devuelve null con texto vacío', () => {

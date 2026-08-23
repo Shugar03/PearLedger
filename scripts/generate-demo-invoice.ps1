@@ -1,54 +1,73 @@
+<<<<<<< HEAD
 # Regenera workspace/invoices/sample.png (factura nítida para OCR).
 # Es la única copia: la demo, el smoke y el dashboard leen todos de ahí.
+=======
+# Regenera tests/fixtures/demo/sample.png (factura nítida para OCR DocTR).
+# Alineada a workspace/purchase-orders/PO-2026-001.json
+>>>>>>> 06b122a (perf(ocr): cachear DocTR en service mode y alinear fixture demo)
 # Usage: powershell -File scripts/generate-demo-invoice.ps1
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
-$root = Split-Path (Split-Path $PSScriptRoot -Parent) -ErrorAction SilentlyContinue
-if (-not $root) { $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $outDir = Join-Path $root 'workspace/invoices'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-$w = 900
-$h = 1200
+$w = 1000
+$h = 1400
 $bmp = New-Object System.Drawing.Bitmap $w, $h
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.Clear([System.Drawing.Color]::White)
 $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
-$fontTitle = New-Object System.Drawing.Font 'Arial', 28, ([System.Drawing.FontStyle]::Bold)
-$font = New-Object System.Drawing.Font 'Consolas', 16
-$fontSm = New-Object System.Drawing.Font 'Consolas', 14
+$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+
+$fontTitle = New-Object System.Drawing.Font 'Arial', 36, ([System.Drawing.FontStyle]::Bold)
+$font = New-Object System.Drawing.Font 'Arial', 22, ([System.Drawing.FontStyle]::Regular)
+$fontSm = New-Object System.Drawing.Font 'Arial', 18, ([System.Drawing.FontStyle]::Regular)
 $brush = [System.Drawing.Brushes]::Black
-$y = 60
-$g.DrawString('INVOICE', $fontTitle, $brush, 60, $y)
-$y += 60
+
+$y = 80
+$g.DrawString('INVOICE', $fontTitle, $brush, 80, $y)
+$y += 80
+
+# Formato alineado a fast-parse (Invoice #… / Vendor: …) y a PO-2026-001
 $lines = @(
-  'Invoice number: INV-001',
+  'Invoice #INV-001',
   'Vendor: Proveedor Demo S.A.',
-  'Date: 2026-08-22',
+  'Date: 2026-08-15',
   'PO Reference: PO-2026-001',
   'Currency: USD',
   '',
-  'Line items:',
   'Description                Qty   Unit Price   Total',
   'Material de oficina          1       100.00  100.00',
   '',
   'Subtotal: 100.00',
   'Tax: 0.00',
-  'Total: 100.00 USD',
+  'TOTAL: 100.00 USD',
   '',
   'Status: pending payment'
 )
+
 foreach ($line in $lines) {
-  $use = if ($line -match 'Line items|Description') { $fontSm } else { $font }
-  $g.DrawString($line, $use, $brush, 60, $y)
-  $y += 36
+  $use = if ($line -match 'Description|Material') { $fontSm } else { $font }
+  $g.DrawString($line, $use, $brush, 80, $y)
+  $y += 48
 }
+
 $g.Dispose()
 
 $sample = Join-Path $outDir 'sample.png'
 $bmp.Save($sample, [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp.Dispose()
+<<<<<<< HEAD
+=======
+Copy-Item $sample $named -Force
+
+$ws = Join-Path $root 'workspace/invoices/sample.png'
+New-Item -ItemType Directory -Force -Path (Split-Path $ws) | Out-Null
+Copy-Item $sample $ws -Force
+
+>>>>>>> 06b122a (perf(ocr): cachear DocTR en service mode y alinear fixture demo)
 Write-Host "Wrote $sample ($((Get-Item $sample).Length) bytes)"
+Write-Host "Copied to $ws"

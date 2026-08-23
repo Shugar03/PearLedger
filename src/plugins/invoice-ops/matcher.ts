@@ -22,7 +22,7 @@ import {
   poToDocument,
   type PurchaseOrder
 } from './purchase-orders.js'
-import { getEmbeddingModelId } from './qvac-client.js'
+import { getEmbeddingModelId, rewarmDoctrIfService } from './qvac-client.js'
 import type { Invoice } from './schema.js'
 import {
   compareThreeWay,
@@ -143,6 +143,18 @@ function unwrapInvoice(value: Invoice | { invoice?: Invoice } | undefined): Invo
 }
 
 export async function matchPurchaseOrder(params: {
+  invoiceId?: string
+  invoice?: Invoice | { invoice?: Invoice }
+}): Promise<MatchResult> {
+  try {
+    return await matchPurchaseOrderInner(params)
+  } finally {
+    // embeddings (índice/RAG) pueden haber desalojado DocTR; recalentar en daemon.
+    rewarmDoctrIfService()
+  }
+}
+
+async function matchPurchaseOrderInner(params: {
   invoiceId?: string
   invoice?: Invoice | { invoice?: Invoice }
 }): Promise<MatchResult> {

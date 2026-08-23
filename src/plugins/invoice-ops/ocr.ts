@@ -16,7 +16,7 @@
 
 import process from 'node:process'
 
-import { cancel, completion, loadModel, ocr, OCR_DOCTR, OCR_LATIN, unloadModel } from '@qvac/sdk'
+import { cancel, completion, ocr } from '@qvac/sdk'
 
 import { getConfig } from '@config/index.js'
 import { getLogger } from '@shared/logger.js'
@@ -24,7 +24,16 @@ import { getLogger } from '@shared/logger.js'
 import { normalizeAmounts } from './amounts.js'
 import { resolveInvoiceImagePath } from './image-input.js'
 import { layoutOcrBlocks, type OcrBlock } from './ocr-layout.js'
-import { clearStaleWorkerLock, getOcrModelId, resetQvacRuntime } from './qvac-client.js'
+import {
+  clearStaleWorkerLock,
+  getDoctrModelId,
+  getLatinModelId,
+  getOcrModelId,
+  hasDoctrModel,
+  hasLatinModel,
+  releaseOnnxOcrIfCli,
+  resetQvacRuntime
+} from './qvac-client.js'
 
 const log = getLogger('invoice-ops:ocr')
 
@@ -71,43 +80,37 @@ function finalizeOcrText(blocks: OcrBlock[]): string {
 
 async function ocrWithDoctr(imagePath: string): Promise<string> {
   clearStaleWorkerLock()
-  const modelId = await loadModel({ modelSrc: OCR_DOCTR })
+  const cacheHit = hasDoctrModel()
+  const modelId = await getDoctrModelId()
   try {
     const { blocks } = ocr({ modelId, image: imagePath })
     const result = await blocks
     const text = finalizeOcrText(result)
     log.info(
-      `DocTR — ${result.length} bloques → ${text.split('\n').length} filas, ${text.length} chars`
+      `DocTR ${cacheHit ? 'cache hit' : 'cache miss'} — ${result.length} bloques → ${text.split('\n').length} filas, ${text.length} chars`
     )
     if (!text) throw new Error('DocTR no extrajo texto')
     return text
   } finally {
-    try {
-      await unloadModel({ modelId, clearStorage: false })
-    } catch {
-      // el worker puede haber muerto ya
-    }
+    await releaseOnnxOcrIfCli('doctr')
   }
 }
 
 async function ocrWithLatinPipeline(imagePath: string): Promise<string> {
   clearStaleWorkerLock()
-  const modelId = await loadModel({ modelSrc: OCR_LATIN })
+  const cacheHit = hasLatinModel()
+  const modelId = await getLatinModelId()
   try {
     const { blocks } = ocr({ modelId, image: imagePath })
     const result = await blocks
     const text = finalizeOcrText(result)
     log.info(
-      `EasyOCR — ${result.length} bloques → ${text.split('\n').length} filas, ${text.length} chars`
+      `EasyOCR ${cacheHit ? 'cache hit' : 'cache miss'} — ${result.length} bloques → ${text.split('\n').length} filas, ${text.length} chars`
     )
     if (!text) throw new Error('EasyOCR no extrajo texto')
     return text
   } finally {
-    try {
-      await unloadModel({ modelId, clearStorage: false })
-    } catch {
-      // el worker puede haber muerto ya
-    }
+    await releaseOnnxOcrIfCli('latin')
   }
 }
 

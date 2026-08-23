@@ -4,6 +4,10 @@
  * El runtime puede desalojar un modelo al cargar otro, así que al (re)cargar uno
  * invalidamos el cache de sus hermanos: quedarse con un `modelId` muerto produce
  * fallos opacos mucho más tarde.
+ *
+ * En `PEARLEDGER_SERVICE_MODE` DocTR (y EasyOCR) se mantienen cargados entre
+ * facturas; embeddings/LLM los invalidan al cargar, y `rewarmDoctrIfService`
+ * los vuelve a calentar en background tras el match.
  */
 
 import fs from 'node:fs'
@@ -16,6 +20,8 @@ import {
   loadModel,
   unloadModel,
   OCR_3B_MULTIMODAL_Q4_0,
+  OCR_DOCTR,
+  OCR_LATIN,
   MMPROJ_OCR_3B_MULTIMODAL_Q8_0,
   QWEN3_1_7B_INST_Q4,
   GTE_LARGE_FP16
@@ -32,6 +38,14 @@ const EMBEDDING_LOAD_TIMEOUT_MS = 180_000
 let ocrModelId: string | null = null
 let llmModelId: string | null = null
 let embeddingModelId: string | null = null
+let doctrModelId: string | null = null
+let latinModelId: string | null = null
+
+/** Evita apilar varios rewarm DocTR en paralelo. */
+let doctrRewarmInFlight: Promise<void> | null = null
+/** Coalesce de loadModel concurrentes (rewarm + OCR). */
+let doctrLoadInFlight: Promise<string> | null = null
+let latinLoadInFlight: Promise<string> | null = null
 
 function ctxSize(): number {
   return getConfig().qvac.ctxSize
@@ -64,12 +78,91 @@ export function clearStaleWorkerLock(): void {
   }
 }
 
+function invalidateOnnxOcrCache(): void {
+  doctrModelId = null
+  latinModelId = null
+}
+
+function invalidateExceptOnnxOcr(): void {
+  ocrModelId = null
+  llmModelId = null
+  embeddingModelId = null
+}
+
+export function hasDoctrModel(): boolean {
+  return doctrModelId !== null
+}
+
+export function hasLatinModel(): boolean {
+  return latinModelId !== null
+}
+
+export async function getDoctrModelId(): Promise<string> {
+  if (doctrModelId) return doctrModelId
+  if (doctrLoadInFlight) return doctrLoadInFlight
+
+  doctrLoadInFlight = (async () => {
+    invalidateExceptOnnxOcr()
+    latinModelId = null
+
+    clearStaleWorkerLock()
+    const startedAt = Date.now()
+    doctrModelId = await loadModel({ modelSrc: OCR_DOCTR })
+    log.info(`DocTR cargado en ${Date.now() - startedAt}ms`)
+    return doctrModelId
+  })().finally(() => {
+    doctrLoadInFlight = null
+  })
+
+  return doctrLoadInFlight
+}
+
+export async function getLatinModelId(): Promise<string> {
+  if (latinModelId) return latinModelId
+  if (latinLoadInFlight) return latinLoadInFlight
+
+  latinLoadInFlight = (async () => {
+    invalidateExceptOnnxOcr()
+    doctrModelId = null
+
+    clearStaleWorkerLock()
+    const startedAt = Date.now()
+    latinModelId = await loadModel({ modelSrc: OCR_LATIN })
+    log.info(`EasyOCR cargado en ${Date.now() - startedAt}ms`)
+    return latinModelId
+  })().finally(() => {
+    latinLoadInFlight = null
+  })
+
+  return latinLoadInFlight
+}
+
+/**
+ * En CLI one-shot descarga el motor ONNX tras el OCR para que el proceso pueda
+ * salir. En service mode el modelo queda pinneado.
+ */
+export async function releaseOnnxOcrIfCli(engine: 'doctr' | 'latin'): Promise<void> {
+  if (isServiceMode()) return
+
+  const modelId = engine === 'doctr' ? doctrModelId : latinModelId
+  if (engine === 'doctr') doctrModelId = null
+  else latinModelId = null
+
+  if (!modelId) return
+  try {
+    await unloadModel({ modelId, clearStorage: false })
+  } catch {
+    // el worker puede haber muerto ya
+  }
+}
+
 export async function getOcrModelId(): Promise<string> {
   if (ocrModelId) return ocrModelId
 
-  // Cargar OCR puede desalojar LLM / embeddings de memoria.
+  // Cargar OCR multimodal puede desalojar LLM / embeddings / DocTR.
   llmModelId = null
   embeddingModelId = null
+  invalidateOnnxOcrCache()
 
   clearStaleWorkerLock()
   ocrModelId = await loadModel({
@@ -87,6 +180,7 @@ export async function getLlmModelId(): Promise<string> {
 
   ocrModelId = null
   embeddingModelId = null
+  invalidateOnnxOcrCache()
 
   clearStaleWorkerLock()
   llmModelId = await loadModel({
@@ -101,6 +195,7 @@ export async function getEmbeddingModelId(): Promise<string> {
 
   ocrModelId = null
   llmModelId = null
+  invalidateOnnxOcrCache()
 
   clearStaleWorkerLock()
   embeddingModelId = await loadModel(
@@ -110,11 +205,41 @@ export async function getEmbeddingModelId(): Promise<string> {
   return embeddingModelId
 }
 
+/**
+ * Tras match (embeddings), recalienta DocTR sin bloquear la respuesta.
+ * Sólo en service mode; no-op si ya hay un rewarm en curso.
+ */
+export function rewarmDoctrIfService(): void {
+  if (!isServiceMode()) return
+  if (doctrModelId) return
+  if (doctrRewarmInFlight) return
+
+  doctrRewarmInFlight = getDoctrModelId()
+    .then(() => {
+      log.info('DocTR re-calentado tras embeddings')
+    })
+    .catch((err) => {
+      log.warn(
+        `rewarm DocTR falló: ${err instanceof Error ? err.message : String(err)}`
+      )
+    })
+    .finally(() => {
+      doctrRewarmInFlight = null
+    })
+}
+
 /** Olvida los `modelId` cacheados sin tocar el runtime. Lo usan los benchmarks. */
 export function resetQvacModelCache(): void {
   ocrModelId = null
   llmModelId = null
   embeddingModelId = null
+  invalidateOnnxOcrCache()
+}
+
+function cachedModelIds(): string[] {
+  return [ocrModelId, llmModelId, embeddingModelId, doctrModelId, latinModelId].filter(
+    (id): id is string => typeof id === 'string'
+  )
 }
 
 /**
@@ -123,9 +248,7 @@ export function resetQvacModelCache(): void {
  * reintento pueda levantar un worker nuevo.
  */
 export async function resetQvacRuntime(): Promise<void> {
-  const ids = [ocrModelId, llmModelId, embeddingModelId].filter(
-    (id): id is string => typeof id === 'string'
-  )
+  const ids = cachedModelIds()
   resetQvacModelCache()
 
   for (const modelId of ids) {
@@ -150,8 +273,9 @@ let modelsPreloaded = false
 /**
  * Precarga embeddings para procesos de larga vida (dashboard/Electron).
  *
- * El LLM (Qwen) se carga bajo demanda en el primer fallback de `parseInvoiceSchema`.
- * DocTR se carga por request en `ocr.ts` y se descarga al terminar cada OCR.
+ * DocTR se calienta después del índice RAG vía `warmDoctrForService()` — cargar
+ * embeddings para el índice desalojaría DocTR si lo precargáramos antes.
+ * El LLM (Qwen) sigue bajo demanda en el primer fallback de `parseInvoiceSchema`.
  */
 export async function preloadQvacModels(): Promise<void> {
   if (modelsPreloaded) return
@@ -160,6 +284,18 @@ export async function preloadQvacModels(): Promise<void> {
   await getEmbeddingModelId()
   modelsPreloaded = true
   log.info('embeddings QVAC listos')
+}
+
+/**
+ * Carga DocTR y lo deja pinneado en service mode.
+ * Llamar tras `ensurePurchaseOrderIndex` para que el índice no lo desaloje.
+ */
+export async function warmDoctrForService(): Promise<void> {
+  if (!isServiceMode()) return
+  if (doctrModelId) return
+  log.info('precargando DocTR para OCR caliente...')
+  await getDoctrModelId()
+  log.info('DocTR listo')
 }
 
 export function isServiceMode(): boolean {
@@ -175,16 +311,14 @@ export function isServiceMode(): boolean {
  */
 export async function shutdownQvacRuntime(options?: { force?: boolean }): Promise<void> {
   if (isServiceMode() && !options?.force) return
-  const ids = [ocrModelId, llmModelId, embeddingModelId].filter(
-    (id): id is string => typeof id === 'string'
-  )
+  const ids = cachedModelIds()
   resetQvacModelCache()
 
   for (const modelId of ids) {
     try {
       await unloadModel({ modelId, clearStorage: false })
     } catch {
-      // el worker puede estar ya muerto
+      // el worker puede haber muerto ya
     }
   }
 
