@@ -144,3 +144,54 @@ export async function resetQvacRuntime(): Promise<void> {
 
   clearStaleWorkerLock()
 }
+
+let modelsPreloaded = false
+
+/**
+ * Precarga embeddings y LLM para procesos de larga vida (dashboard/Electron).
+ * DocTR se carga por request en `ocr.ts` y se descarga al terminar cada OCR.
+ */
+export async function preloadQvacModels(): Promise<void> {
+  if (modelsPreloaded) return
+  clearStaleWorkerLock()
+  log.info('precargando modelos QVAC (embeddings + LLM)...')
+  await getEmbeddingModelId()
+  await getLlmModelId()
+  modelsPreloaded = true
+  log.info('modelos QVAC listos')
+}
+
+export function isServiceMode(): boolean {
+  return getConfig().service.mode
+}
+
+/**
+ * Cierra el runtime QVAC al terminar un comando CLI.
+ *
+ * `unloadModel` sólo cierra el RPC automáticamente cuando se descarga el último
+ * modelo. Nosotros dejábamos el LLM cargado tras `ingest`, así que el proceso
+ * quedaba colgado minutos después de imprimir el JSON.
+ */
+export async function shutdownQvacRuntime(options?: { force?: boolean }): Promise<void> {
+  if (isServiceMode() && !options?.force) return
+  const ids = [ocrModelId, llmModelId, embeddingModelId].filter(
+    (id): id is string => typeof id === 'string'
+  )
+  resetQvacModelCache()
+
+  for (const modelId of ids) {
+    try {
+      await unloadModel({ modelId, clearStorage: false })
+    } catch {
+      // el worker puede estar ya muerto
+    }
+  }
+
+  try {
+    await close()
+  } catch {
+    // idem
+  }
+
+  clearStaleWorkerLock()
+}

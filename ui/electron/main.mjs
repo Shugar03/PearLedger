@@ -16,6 +16,8 @@ import {
   listTools,
   onHarnessEvent
 } from '../../dist/ipc/bridge.js'
+import { ensurePdfRasterized } from '../../dist/plugins/invoice-ops/image-input.js'
+import { shutdownQvacRuntime } from '../../dist/plugins/invoice-ops/qvac-client.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const rendererDir = path.join(here, '..', '..', 'dist', 'dashboard', 'web')
@@ -30,10 +32,10 @@ function sendToRenderer(payload) {
 }
 
 async function initHarness() {
+  sendToRenderer({ type: 'harness:loading', tool: 'boot', payload: { models: false } })
   await ensureHarnessReady()
+  sendToRenderer({ type: 'harness:ready', tool: 'boot', payload: { models: true } })
 
-  // El objeto Tool lleva el handler (una función), que no es serializable por
-  // IPC: solo se retransmite el nombre.
   const relay = (type) => (tool, payload) =>
     sendToRenderer({ type, tool: tool?.name ?? String(tool), payload: safe(payload) })
 
@@ -59,12 +61,17 @@ function createWindow() {
     minHeight: 640,
     title: 'PearLedger',
     backgroundColor: '#0f1115',
+    show: false,
     webPreferences: {
       preload: path.join(here, 'preload.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
     }
+  })
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
   })
 
   mainWindow.loadFile(path.join(rendererDir, 'index.html'))
@@ -76,6 +83,10 @@ function createWindow() {
 ipcMain.handle('pear:listTools', async () => listTools())
 
 ipcMain.handle('pear:execute', async (_event, name, params = {}) => {
+  if (name === 'parse_invoice' && params && typeof params.filePath === 'string') {
+    const rasterized = await ensurePdfRasterized(params.filePath)
+    return executeTool(name, { ...params, filePath: rasterized })
+  }
   return executeTool(name, params)
 })
 
@@ -92,15 +103,23 @@ ipcMain.handle('pear:pickInvoice', async () => {
 })
 
 app.whenReady().then(async () => {
-  await initHarness()
+  process.env.PEARLEDGER_SERVICE_MODE = '1'
   createWindow()
+  await initHarness()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-app.on('window-all-closed', () => {
+app.on('before-quit', (event) => {
+  event.preventDefault()
   for (const off of unsubscribers.splice(0)) off()
+  shutdownQvacRuntime({ force: true })
+    .catch(() => undefined)
+    .finally(() => app.exit(0))
+})
+
+app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })

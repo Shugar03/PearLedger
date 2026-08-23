@@ -198,6 +198,16 @@
       setStream('live')
       return
     }
+    if (event.type === 'harness:loading') {
+      setModelStatus('Cargando modelos…', 'busy')
+      setStatus('Cargando modelos…', 'busy')
+      return
+    }
+    if (event.type === 'harness:ready') {
+      setModelStatus('Listos', 'ready')
+      setStatus('Listo')
+      return
+    }
     pushEvent(event)
     if (event.type === 'tool:blocked') {
       setStatus('Acción bloqueada — requiere confirmación humana', 'error')
@@ -216,7 +226,62 @@
     if (notes.length) setStatus('Política del servidor: ' + notes[0], 'busy')
   })
 
-  // ── Inbox ─────────────────────────────────────────────────────────────
+  function setModelStatus(text, kind) {
+    var el = $('#meta-models')
+    if (!el) return
+    el.textContent = text
+    el.classList.remove('busy', 'ready')
+    if (kind === 'busy') el.classList.add('busy')
+    if (kind === 'ready') el.classList.add('ready')
+  }
+
+  function matchLabel(status) {
+    if (status === 'matched') return '✓ Conciliada'
+    if (status === 'vendor_mismatch') return '⚠ Proveedor no coincide'
+    if (status === 'amount_mismatch') return '⚠ Monto no coincide'
+    if (status === 'no_match') return 'Sin orden de compra'
+    return status || 'Sin conciliar'
+  }
+
+  function setInboxProgress(text, visible) {
+    var el = $('#inbox-progress')
+    if (!el) return
+    if (visible === false) {
+      el.hidden = true
+      return
+    }
+    el.hidden = false
+    el.textContent = text
+  }
+
+  function renderInboxSummary(parsed, match) {
+    var el = $('#inbox-summary')
+    if (!el) return
+
+    var invoice = parsed && (parsed.invoice || parsed)
+    if (!invoice || typeof invoice !== 'object') {
+      el.hidden = true
+      return
+    }
+
+    var vendor = invoice.vendor || '—'
+    var total = invoice.total != null ? String(invoice.total) : '—'
+    var currency = invoice.currency || ''
+    var status = match && match.status ? String(match.status) : 'sin match'
+    var badge = matchLabel(status)
+
+    el.hidden = false
+    el.className = 'note inbox-summary status-' + status.replace(/[^a-z_]/gi, '_')
+    el.innerHTML =
+      '<b>Proveedor:</b> ' +
+      vendor +
+      ' · <b>Total:</b> ' +
+      total +
+      (currency ? ' ' + currency : '') +
+      ' · <b>Conciliación:</b> ' +
+      badge
+  }
+
 
   var DEMO_INVOICE = 'workspace/invoices/sample.png'
 
@@ -268,7 +333,13 @@
         return
       }
 
+      setInboxProgress('OCR y extracción en curso (puede tardar en frío)…', true)
+      renderInboxSummary(null, null)
+      setStatus('Procesando factura…', 'busy')
+
       var parsed = await runTool('parse_invoice', { filePath: filePath })
+      setInboxProgress('Conciliando contra órdenes de compra…', true)
+
       var match = null
 
       if (parsed && !parsed.blocked) {
@@ -280,6 +351,8 @@
         })
       }
 
+      setInboxProgress('', false)
+      renderInboxSummary(parsed, match)
       renderJson('#inbox-result', { parsed: parsed, match: match })
     })
   )
@@ -400,12 +473,15 @@
 
   async function boot() {
     setStream('idle')
+    setModelStatus('Cargando modelos…', 'busy')
     try {
       var tools = await pear.listTools()
       var metaTools = $('#meta-tools')
       if (metaTools) metaTools.textContent = String(tools.length)
+      setModelStatus('Listos', 'ready')
       setStatus('Listo · ' + tools.length + ' tools')
     } catch (err) {
+      setModelStatus('Error', 'busy')
       setStatus((err && err.message) || 'Sin harness', 'error')
     }
 

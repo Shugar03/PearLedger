@@ -86,6 +86,7 @@ export {
   type InvoiceIssue,
   type InvoiceQuality
 } from './schema.js'
-export { resolveInvoiceImagePath } from './image-input.js'
+export { resolveInvoiceImagePath, ensurePdfRasterized } from './image-input.js'
+export { fastParseInvoice } from './fast-parse.js'
 export { compareThreeWay, confidenceFrom } from './three-way.js'
 export { loadPurchaseOrders } from './purchase-orders.js'

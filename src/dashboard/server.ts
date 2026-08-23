@@ -13,9 +13,11 @@
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
+import process from 'node:process'
 
-import { getConfig } from '@config/index.js'
+import { getConfig, resetConfig } from '@config/index.js'
 import { ensureHarnessReady } from '@ipc/bridge.js'
+import { shutdownQvacRuntime } from '@plugins/invoice-ops/qvac-client.js'
 import { getLogger } from '@shared/logger.js'
 import { META } from '@shared/meta.js'
 import { appRoot, dataDir } from '@shared/paths.js'
@@ -96,6 +98,9 @@ function isAddressInUse(err: unknown): boolean {
 export async function startDashboard(
   options: StartDashboardOptions = {}
 ): Promise<DashboardHandle> {
+  process.env.PEARLEDGER_SERVICE_MODE = '1'
+  resetConfig()
+
   const log = getLogger('dashboard')
   const config = getConfig()
 
@@ -169,8 +174,6 @@ export async function startDashboard(
   if (options.open) log.info(`  Abrí ${url} en el navegador (no se lanza solo: cero dependencias)`)
   log.info('')
 
-  // Precalienta el harness para que la primera tool no pague el arranque, sin
-  // que un fallo de plugins impida servir la página de diagnóstico.
   ensureHarnessReady().catch((err: unknown) => {
     log.warn(`el harness no arrancó: ${err instanceof Error ? err.message : String(err)}`)
   })
@@ -181,10 +184,13 @@ export async function startDashboard(
     token,
     close(): Promise<void> {
       hub.close()
-      return new Promise<void>((resolve) => {
-        server.close(() => resolve())
-        server.closeAllConnections?.()
-      })
+      return shutdownQvacRuntime({ force: true }).then(
+        () =>
+          new Promise<void>((resolve) => {
+            server.close(() => resolve())
+            server.closeAllConnections?.()
+          })
+      )
     }
   }
 }

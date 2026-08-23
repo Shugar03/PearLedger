@@ -97,12 +97,19 @@ const envSchema = z.object({
   QVAC_CTX_SIZE: numeric(4096),
   QVAC_HOME: z.string().trim().optional(),
   QVAC_OCR_PATH: z.enum(['auto', 'latin', 'multimodal']).default('auto'),
+  /** Pipeline ONNX: DocTR (rápido) vs EasyOCR (latin). `auto` = DocTR → latin → multimodal. */
+  QVAC_OCR_PIPELINE: z.enum(['auto', 'doctr', 'latin', 'multimodal']).default('auto'),
   QVAC_OCR_PATH_B_TIMEOUT_MS: numeric(45_000),
   QVAC_OCR_MAX_EDGE: numeric(896),
+  QVAC_OCR_LOW_CONFIDENCE: numeric(0.5),
 
   // ── Conciliación de facturas ─────────────────────────────────────────────
   PEARLEDGER_STRICT_INVOICE: booleanish(true),
+  PEARLEDGER_FAST_PARSE: booleanish(true),
+  PEARLEDGER_FAST_PARSE_MIN_CONFIDENCE: numeric(0.75),
   PEARLEDGER_VENDOR_MIN_SIM: numeric(0.34),
+  /** Proceso de larga vida (dashboard/Electron): no descargar QVAC tras cada tool. */
+  PEARLEDGER_SERVICE_MODE: booleanish(false),
   /** Exige 3-way match conciliado antes de permitir un pago. */
   PEARLEDGER_REQUIRE_MATCH: booleanish(true),
 
@@ -148,13 +155,22 @@ export interface QvacConfig {
   ctxSize: number
   home?: string
   ocrPath: 'auto' | 'latin' | 'multimodal'
+  ocrPipeline: 'auto' | 'doctr' | 'latin' | 'multimodal'
   ocrPathBTimeoutMs: number
   ocrMaxEdge: number
+  ocrLowConfidence: number
 }
 
 export interface InvoiceConfig {
   strict: boolean
+  fastParse: boolean
+  fastParseMinConfidence: number
   vendorMinSimilarity: number
+}
+
+export interface ServiceConfig {
+  /** Mantener modelos QVAC cargados entre invocaciones. */
+  mode: boolean
 }
 
 export interface DashboardConfig {
@@ -167,6 +183,7 @@ export interface AppConfig {
   wdk: WdkConfig
   qvac: QvacConfig
   invoice: InvoiceConfig
+  service: ServiceConfig
   dashboard: DashboardConfig
   logLevel: 'silent' | 'error' | 'warn' | 'info' | 'debug'
 }
@@ -226,12 +243,19 @@ function build(source: NodeJS.ProcessEnv): AppConfig {
       ctxSize: env.QVAC_CTX_SIZE,
       home: env.QVAC_HOME || undefined,
       ocrPath: env.QVAC_OCR_PATH,
+      ocrPipeline: env.QVAC_OCR_PIPELINE,
       ocrPathBTimeoutMs: env.QVAC_OCR_PATH_B_TIMEOUT_MS,
-      ocrMaxEdge: env.QVAC_OCR_MAX_EDGE
+      ocrMaxEdge: env.QVAC_OCR_MAX_EDGE,
+      ocrLowConfidence: env.QVAC_OCR_LOW_CONFIDENCE
     },
     invoice: {
       strict: env.PEARLEDGER_STRICT_INVOICE,
+      fastParse: env.PEARLEDGER_FAST_PARSE,
+      fastParseMinConfidence: env.PEARLEDGER_FAST_PARSE_MIN_CONFIDENCE,
       vendorMinSimilarity: env.PEARLEDGER_VENDOR_MIN_SIM
+    },
+    service: {
+      mode: env.PEARLEDGER_SERVICE_MODE
     },
     dashboard: {
       port: env.PEARLEDGER_DASHBOARD_PORT,

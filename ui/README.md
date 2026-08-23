@@ -10,21 +10,34 @@ Desde la raíz del repo:
 npm run ui:dev
 ```
 
-Requiere `npm run build:ts` (el script `ui:dev` lo ejecuta automáticamente).
+Requiere `npm run build` (el script `ui:dev` lo ejecuta automáticamente).
+
+El renderer vive en `src/dashboard/web/` — es el mismo HTML/JS que el dashboard web en
+`http://127.0.0.1:7331`. Electron solo aporta `window.pear` vía preload y el diálogo
+nativo `pickInvoice()`.
 
 ## Estructura
 
 ```
 ui/
-  electron/main.mjs    → ipcMain + dist/harness/ipc-bridge.js
+  electron/main.mjs    → ipcMain + dist/ipc/bridge.js
   electron/preload.mjs → window.pear API
-  renderer/            → HTML/CSS/JS (Bento MVP)
+src/dashboard/web/     → HTML/CSS/JS compartido (Bento MVP)
 ```
+
+## Empaquetado (Windows)
+
+```bash
+npm run build
+cd ui && npm install && npm run dist
+```
+
+Genera un instalador en `ui/dist/` vía `electron-builder`.
 
 ## Extender
 
-- Estilos: `renderer/styles.css` (lime `#c4f53c` del manifiesto)
+- Estilos: `src/dashboard/web/styles.css`
 - Nuevas pantallas: agregar sección en `index.html` + handler en `app.js`
 - Eventos harness: `window.pear.onEvent(...)`
 
-Ver `docs/PHASE-B-INTEGRATION.md` y `docs/TEAM.md` (MVP completo).
+Ver `docs/PHASE-B-INTEGRATION.md` y `docs/TEAM.md`.

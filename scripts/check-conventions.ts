@@ -62,7 +62,7 @@ function stripComments(source: string): string[] {
   const withoutBlocks = source.replace(/\/\*[\s\S]*?\*\//g, (block) =>
     block.replace(/[^\n]/g, ' ')
   )
-  return withoutBlocks.split('\n').map((line) => line.replace(/\/\/.*$/, ''))
+  return withoutBlocks.split(/\r?\n/).map((line) => line.replace(/\/\/.*/, ''))
 }
 
 const files = walk(srcDir)

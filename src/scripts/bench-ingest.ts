@@ -26,12 +26,10 @@ import { mkdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { completion, loadModel, ocr, OCR_LATIN, unloadModel } from '@qvac/sdk'
-
 import { getLogger, writeOut } from '@shared/logger.js'
 import { appRoot, workspaceDir } from '@shared/paths.js'
-import { matchPurchaseOrder, parseInvoiceSchema, resolveInvoiceImagePath } from '@plugins/invoice-ops/index.js'
-import { resetQvacModelCache, getOcrModelId } from '@plugins/invoice-ops/qvac-client.js'
+import { matchPurchaseOrder, ocrInvoice, parseInvoiceSchema, resolveInvoiceImagePath } from '@plugins/invoice-ops/index.js'
+import { resetQvacModelCache } from '@plugins/invoice-ops/qvac-client.js'
 import type { Invoice, MatchResult } from '@plugins/invoice-ops/index.js'
 
 const log = getLogger('bench-ingest')
@@ -57,7 +55,7 @@ export interface StageTrace {
   path?: string
 }
 
-export type OcrPath = 'B_multimodal' | 'A_latin_fallback' | null
+export type OcrPath = 'doctr' | 'latin' | 'multimodal' | 'pipeline' | null
 
 export interface BenchRow {
   index: number
@@ -152,48 +150,6 @@ const max = (values: readonly number[]): number | null =>
 
 // ── Estrategia in-process ───────────────────────────────────────────────────
 
-/** Path B: OCR multimodal sobre el modelo cargado por `qvac-client`. */
-async function ocrPathB(imagePath: string): Promise<string> {
-  const modelId = await getOcrModelId()
-  const run = completion({
-    modelId,
-    stream: false,
-    history: [
-      {
-        role: 'user',
-        content:
-          'Extract all visible text from this invoice document. Return plain text only, ' +
-          'preserving line breaks and numbers exactly as shown.',
-        attachments: [{ path: imagePath }]
-      }
-    ]
-  })
-  const final = await run.final
-  return (final.contentText ?? '').trim()
-}
-
-/**
- * Path A: OCR_LATIN. Se carga sólo tras fallar Path B y se libera al terminar,
- * para no competir por VRAM con el multimodal ni con el LLM del schema.
- */
-async function ocrPathA(imagePath: string): Promise<string> {
-  const modelId = await loadModel({ modelSrc: OCR_LATIN })
-  try {
-    const { blocks } = ocr({ modelId, image: imagePath })
-    const result = await blocks
-    return result
-      .map((block) => block.text)
-      .join('\n')
-      .trim()
-  } finally {
-    try {
-      await unloadModel({ modelId, clearStorage: false })
-    } catch {
-      await unloadModel({ modelId })
-    }
-  }
-}
-
 async function runInProcess(file: string, index: number): Promise<BenchRow> {
   const fileStat = await stat(file)
   const row: BenchRow = {
@@ -222,23 +178,14 @@ async function runInProcess(file: string, index: number): Promise<BenchRow> {
   }
   const imagePath = resolved.result
 
-  const pathB = await timed(() => ocrPathB(imagePath))
-  row.stages.ocr_path_b = traceOf(pathB)
-
-  let rawText: string
-  if (pathB.ok && pathB.result) {
-    rawText = pathB.result
-    row.ocrPath = 'B_multimodal'
-  } else {
-    const pathA = await timed(() => ocrPathA(imagePath))
-    row.stages.ocr_path_a = traceOf(pathA)
-    if (!pathA.ok || !pathA.result) {
-      row.error = pathA.error ?? pathB.error ?? 'OCR vacío'
-      return finish()
-    }
-    rawText = pathA.result
-    row.ocrPath = 'A_latin_fallback'
+  const ocrStage = await timed(() => ocrInvoice(file))
+  row.stages.ocr = traceOf(ocrStage)
+  if (!ocrStage.ok || !ocrStage.result) {
+    row.error = ocrStage.error ?? 'OCR vacío'
+    return finish()
   }
+  const rawText = ocrStage.result
+  row.ocrPath = 'pipeline'
 
   row.rawTextLen = rawText.length
   row.rawTextPreview = rawText.slice(0, RAW_PREVIEW_CHARS)
@@ -265,17 +212,17 @@ function summarizeInProcess(rows: readonly BenchRow[]): Record<string, unknown> 
   const stageMs = (key: string): number[] =>
     rows.map((r) => r.stages[key]?.ms).filter((n): n is number => typeof n === 'number')
 
-  const bMs = stageMs('ocr_path_b')
+  const ocrMs = stageMs('ocr')
   const sMs = stageMs('schema_llm')
   const mMs = stageMs('match_po')
 
   const bottlenecks: Array<Record<string, unknown>> = []
-  const bAvg = avg(bMs) ?? 0
-  if (bAvg > (avg(sMs) ?? 0) && bAvg > (avg(mMs) ?? 0)) {
+  const ocrAvg = avg(ocrMs) ?? 0
+  if (ocrAvg > (avg(sMs) ?? 0) && ocrAvg > (avg(mMs) ?? 0)) {
     bottlenecks.push({
-      stage: 'ocr_path_b_multimodal',
+      stage: 'ocr',
       why: 'Mayor tiempo medio de las etapas de inferencia',
-      avgMs: bAvg
+      avgMs: ocrAvg
     })
   }
   if ((avg(sMs) ?? 0) > SLOW_SCHEMA_MS) {
@@ -285,15 +232,15 @@ function summarizeInProcess(rows: readonly BenchRow[]): Record<string, unknown> 
       avgMs: avg(sMs)
     })
   }
-  const pathBFailures = rows.filter((r) => r.stages.ocr_path_b && !r.stages.ocr_path_b.ok)
-  if (pathBFailures.length > 0) {
+  const ocrFailures = rows.filter((r) => r.stages.ocr && !r.stages.ocr.ok)
+  if (ocrFailures.length > 0) {
     bottlenecks.push({
-      stage: 'ocr_path_b failures',
-      why: 'Path B falló en al menos una factura',
-      samples: pathBFailures.map((r) => ({
+      stage: 'ocr failures',
+      why: 'OCR falló en al menos una factura',
+      samples: ocrFailures.map((r) => ({
         file: r.file,
-        error: r.stages.ocr_path_b?.error,
-        ms: r.stages.ocr_path_b?.ms
+        error: r.stages.ocr?.error,
+        ms: r.stages.ocr?.ms
       }))
     })
   }
@@ -315,17 +262,15 @@ function summarizeInProcess(rows: readonly BenchRow[]): Record<string, unknown> 
   return {
     count: rows.length,
     okCount: rows.filter((r) => r.invoice).length,
-    pathBCount: rows.filter((r) => r.ocrPath === 'B_multimodal').length,
-    pathAFallbackCount: rows.filter((r) => r.ocrPath === 'A_latin_fallback').length,
+    pipelineCount: rows.filter((r) => r.ocrPath === 'pipeline').length,
     totalsMs: { avg: avg(totals), max: max(totals), sum: totals.reduce((a, b) => a + b, 0) },
     stagesAvgMs: {
       resolve_image: avg(stageMs('resolve_image')),
-      ocr_path_b: avg(bMs),
-      ocr_path_a: avg(stageMs('ocr_path_a')),
+      ocr: avg(ocrMs),
       schema_llm: avg(sMs),
       match_po: avg(mMs)
     },
-    stagesMaxMs: { ocr_path_b: max(bMs), schema_llm: max(sMs), match_po: max(mMs) },
+    stagesMaxMs: { ocr: max(ocrMs), schema_llm: max(sMs), match_po: max(mMs) },
     coldVsWarm: {
       coldTotalMs: rows[0]?.totalMs ?? null,
       warmAvgTotalMs: avg(rows.slice(1).map((r) => r.totalMs))
@@ -335,11 +280,11 @@ function summarizeInProcess(rows: readonly BenchRow[]): Record<string, unknown> 
 }
 
 const IN_PROCESS_NOTES = [
-  'Cada factura recarga OCR→LLM→(embeddings) porque QVAC suele desalojar el modelo anterior.',
-  'PNG de alta resolución / muchos tokens de imagen → ctx 4096 overflow en Path B.',
+  'Usa el pipeline real (`ocrInvoice`: DocTR → Latin → multimodal).',
+  'En servicio caliente (Electron/dashboard) el OCR baja a ~3 s por factura.',
+  'fast-parse evita el LLM en facturas estándar — ver `fast-parse.ts`.',
   'match_po sin POs JSON → status no_po_candidates (esperado hasta cargar OCs).',
-  'schema_llm es una segunda pasada de Qwen: coste fijo por factura aunque el OCR sea rápido.',
-  'No precargar OCR+LLM juntos: cache de modelId stale + OOM ggml_gallocr.'
+  'schema_llm es fallback cuando fast-parse no alcanza confianza.'
 ]
 
 // ── Estrategia aislada (un proceso por factura) ─────────────────────────────
@@ -431,7 +376,7 @@ function runIsolated(file: string, index: number, timeoutMs: number): Promise<Be
               ...(timedOut ? { error: `timeout ${timeoutMs}ms` } : {})
             }
           },
-          ocrPath: pathBOk ? 'B_multimodal' : usedLatin ? 'A_latin_fallback' : null,
+          ocrPath: pathBOk ? 'multimodal' : usedLatin ? 'latin' : null,
           rawTextLen: payload?.parsed?.rawTextPreview?.length ?? 0,
           rawTextPreview: payload?.parsed?.rawTextPreview ?? '',
           invoice,
@@ -462,8 +407,8 @@ function summarizeIsolated(rows: readonly BenchRow[]): Record<string, unknown> {
   return {
     count: rows.length,
     okCount: rows.filter((r) => r.invoice).length,
-    pathBCount: rows.filter((r) => r.ocrPath === 'B_multimodal').length,
-    pathAFallbackCount: rows.filter((r) => r.ocrPath === 'A_latin_fallback').length,
+    pathBCount: rows.filter((r) => r.ocrPath === 'multimodal').length,
+    pathAFallbackCount: rows.filter((r) => r.ocrPath === 'latin').length,
     timedOutCount: rows.filter((r) => r.timedOut).length,
     totalsMs: { avg: avg(totals), max: max(totals), sum: totals.reduce((a, b) => a + b, 0) },
     stagesAvgMs: { ingest_cli: avg(totals), ocr_path_b: avg(pathBMs) },
