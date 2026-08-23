@@ -148,17 +148,18 @@ export async function resetQvacRuntime(): Promise<void> {
 let modelsPreloaded = false
 
 /**
- * Precarga embeddings y LLM para procesos de larga vida (dashboard/Electron).
+ * Precarga embeddings para procesos de larga vida (dashboard/Electron).
+ *
+ * El LLM (Qwen) se carga bajo demanda en el primer fallback de `parseInvoiceSchema`.
  * DocTR se carga por request en `ocr.ts` y se descarga al terminar cada OCR.
  */
 export async function preloadQvacModels(): Promise<void> {
   if (modelsPreloaded) return
   clearStaleWorkerLock()
-  log.info('precargando modelos QVAC (embeddings + LLM)...')
+  log.info('precargando embeddings QVAC (LLM bajo demanda)...')
   await getEmbeddingModelId()
-  await getLlmModelId()
   modelsPreloaded = true
-  log.info('modelos QVAC listos')
+  log.info('embeddings QVAC listos')
 }
 
 export function isServiceMode(): boolean {

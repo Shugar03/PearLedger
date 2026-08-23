@@ -218,9 +218,12 @@ export async function parseInvoiceSchema(
       const quality = assessInvoice(invoice)
       if (quality.ok || options.strict === false) return invoice
       log.warn('fast-parse rechazado por calidad — fallback LLM')
+    } else {
+      log.info('fast-parse sin resultado — fallback LLM')
     }
   }
 
+  log.info('cargando LLM para extracción estructurada (puede tardar en la primera vez)...')
   const modelId = await getLlmModelId()
 
   const run = completion({
