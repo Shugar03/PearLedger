@@ -18,7 +18,6 @@ export type StatusCode =
   | 'cancelled'
   | 'policy'
   | 'error'
-  | 'noHarness'
 
 export interface Status {
   code: StatusCode
@@ -36,6 +35,17 @@ export function statusText(status: Status, t: Dict): string {
   if (code === 'ready') return t.status.ready(Number(detail ?? 0))
   if (code === 'running') return t.status.running(String(detail ?? ''))
   if (code === 'policy') return t.status.policy(String(detail ?? ''))
-  if (code === 'error') return String(detail ?? t.status.noHarness)
+  if (code === 'error') return t.status.error
   return t.status[code]
+}
+
+/**
+ * El texto crudo que devolvió el harness, para el `title` de la píldora.
+ *
+ * Va aparte del mensaje porque no está traducido — sale de una librería o del
+ * sistema operativo — y porque en una cabecera no entra. Perderlo sería peor:
+ * es lo único que dice si el problema fue un lock, un puerto o un modelo.
+ */
+export function statusDetail(status: Status): string | undefined {
+  return status.code === 'error' && status.detail ? String(status.detail) : undefined
 }

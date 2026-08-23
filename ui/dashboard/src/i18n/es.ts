@@ -23,12 +23,12 @@ export const es = {
   sidebar: {
     tools: 'Tools',
     version: 'Versión',
-    models: 'Modelos',
+    harness: 'Harness',
     mode: 'Modo',
     dryRun: 'dry-run',
-    modelsBusy: 'Cargando…',
-    modelsReady: 'Listos',
-    modelsError: 'Error'
+    harnessBusy: 'Arrancando…',
+    harnessReady: 'Listo',
+    harnessError: 'No disponible'
   },
 
   topbar: {
@@ -63,7 +63,7 @@ export const es = {
     failed: 'La tool falló',
     cancelled: 'Simulación cancelada',
     policy: (note: string) => `Política del servidor: ${note}`,
-    noHarness: 'Sin harness'
+    error: 'Harness no disponible'
   },
 
   rail: {
@@ -216,6 +216,17 @@ export const es = {
     title: 'Tools del harness',
     lead: (count: number | string) => `${count} tools registradas por los plugins locales.`,
     loading: 'Cargando el catálogo…'
+  },
+
+  toolDescriptions: {
+    parse_invoice: 'OCR local y extracción estructurada de la factura',
+    match_purchase_order: 'Match 3-way contra las órdenes de compra, vía RAG',
+    check_inventory: 'Consulta el stock actual por SKU',
+    run_usage_forecast: 'Proyecta consumo y fecha de quiebre de stock',
+    draft_purchase_order: 'Redacta una propuesta de pedido si el stock baja del umbral',
+    get_wallet_balance: 'Saldo de la wallet WDK: USDt y nativo',
+    quote_payment: 'Cotiza un pago gasless en USDt (cache de 2 min, sólo cotizaciones válidas)',
+    execute_gasless_payment: 'Ejecuta una transferencia gasless de USDt (exige dryRun:false explícito)'
   },
 
   common: {

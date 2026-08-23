@@ -55,6 +55,12 @@ ejecución y una tabla con las últimas.
 El estado del stream sólo aparece cuando hay algo que decir: "en vivo" era ruido
 permanente, "reconectando" y "sin stream" sí piden atención.
 
+La fila de la barra lateral dice **Harness**, no "Modelos": lo que sigue es si
+el harness respondió, y cuando falla — dos instancias peleando por el lock del
+worker, por ejemplo — el motivo real no eran los modelos. El mensaje que se
+muestra está traducido; el texto crudo del error, que sale de una librería o
+del sistema, queda en el `title` de la píldora.
+
 El logo va en `src/assets/`, en dos versiones — tinta y blanca — y las dos se
 montan siempre: la CSS esconde la que no corresponde, con el mismo criterio que
 los tokens. Así el cambio de tema no depende de que React sepa cuál está

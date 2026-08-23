@@ -4,7 +4,7 @@ import { Icon } from '@dashboard/components/Icon'
 import { LanguageMenu } from '@dashboard/components/LanguageMenu'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
-import { statusText } from '@dashboard/lib/status'
+import { statusDetail, statusText } from '@dashboard/lib/status'
 
 /**
  * Cabecera: acción rápida a la izquierda, preferencias y alertas a la derecha.
@@ -68,6 +68,7 @@ export function TopBar({
       <span
         key={statusText(status, t)}
         className={status.tone === 'error' ? 'pill pill--warn pill--flip' : 'pill pill--flip'}
+        title={statusDetail(status)}
       >
         {statusText(status, t)}
       </span>

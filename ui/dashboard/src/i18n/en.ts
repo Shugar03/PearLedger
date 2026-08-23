@@ -16,12 +16,12 @@ export const en: Dict = {
   sidebar: {
     tools: 'Tools',
     version: 'Version',
-    models: 'Models',
+    harness: 'Harness',
     mode: 'Mode',
     dryRun: 'dry-run',
-    modelsBusy: 'Loading…',
-    modelsReady: 'Ready',
-    modelsError: 'Error'
+    harnessBusy: 'Starting…',
+    harnessReady: 'Ready',
+    harnessError: 'Unavailable'
   },
 
   topbar: {
@@ -56,7 +56,7 @@ export const en: Dict = {
     failed: 'The tool failed',
     cancelled: 'Simulation cancelled',
     policy: (note: string) => `Server policy: ${note}`,
-    noHarness: 'No harness'
+    error: 'Harness unavailable'
   },
 
   rail: {
@@ -208,6 +208,17 @@ export const en: Dict = {
     title: 'Harness tools',
     lead: (count: number | string) => `${count} tools registered by the local plugins.`,
     loading: 'Loading the catalogue…'
+  },
+
+  toolDescriptions: {
+    parse_invoice: 'Local OCR and structured extraction of the invoice',
+    match_purchase_order: '3-way match against the purchase orders, via RAG',
+    check_inventory: 'Current stock by SKU',
+    run_usage_forecast: 'Projects consumption and the stockout date',
+    draft_purchase_order: 'Drafts a purchase proposal when stock falls below the threshold',
+    get_wallet_balance: 'WDK wallet balance: USDt and native',
+    quote_payment: 'Quotes a gasless USDt payment (2 min cache, successful quotes only)',
+    execute_gasless_payment: 'Runs a gasless USDt transfer (needs an explicit dryRun:false)'
   },
 
   common: {

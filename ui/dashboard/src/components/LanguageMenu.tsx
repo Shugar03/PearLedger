@@ -58,10 +58,9 @@ export function LanguageMenu(): ReactNode {
         aria-label={t.topbar.language}
         onClick={() => setOpen((value) => !value)}
       >
-        <Flag locale={locale} />
-        <span className="lang__code">{t.languages[locale]}</span>
+        <Flag locale={locale} size={19} />
         <span className={open ? 'lang__caret is-open' : 'lang__caret'}>
-          <Icon name="caret" size={14} />
+          <Icon name="caret" size={12} />
         </span>
       </button>
 

@@ -16,12 +16,12 @@ export function Sidebar({
   const { meta } = usePear()
   const { t } = usePrefs()
 
-  const models =
+  const harness =
     meta.models === 'ready'
-      ? t.sidebar.modelsReady
+      ? t.sidebar.harnessReady
       : meta.models === 'error'
-        ? t.sidebar.modelsError
-        : t.sidebar.modelsBusy
+        ? t.sidebar.harnessError
+        : t.sidebar.harnessBusy
 
   const group = (name: 'main' | 'aside'): ReactNode => (
     <nav className="nav" aria-label={name === 'main' ? t.nav.sections : t.nav.harness}>
@@ -67,8 +67,8 @@ export function Sidebar({
             <b>{meta.version ? `v${meta.version}` : t.common.none}</b>
           </div>
           <div className="meta__row">
-            <span>{t.sidebar.models}</span>
-            <b className={meta.models === 'ready' ? 'is-ready' : 'is-busy'}>{models}</b>
+            <span>{t.sidebar.harness}</span>
+            <b className={meta.models === 'ready' ? 'is-ready' : 'is-busy'}>{harness}</b>
           </div>
           <div className="meta__row">
             <span>{t.sidebar.mode}</span>

@@ -3,7 +3,20 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Card } from '@dashboard/components/Card'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
+import type { Dict } from '@dashboard/i18n'
 import type { ToolDescriptor } from '@dashboard/lib/types'
+
+/**
+ * La descripción traducida de una tool.
+ *
+ * El harness las trae en español porque así están escritas en los plugins; las
+ * ocho conocidas se traducen acá. Una tool nueva se muestra tal cual la
+ * describe su plugin: mejor en un idioma que en blanco.
+ */
+function describe(tool: ToolDescriptor, t: Dict): string {
+  const known = t.toolDescriptions as Record<string, string | undefined>
+  return known[tool.name] ?? tool.description
+}
 
 /**
  * El catálogo que expone el harness.
@@ -43,7 +56,7 @@ export function ToolsView(): ReactNode {
             <article className="tool" key={tool.name}>
               <span className="tool__name">{tool.name}</span>
               <span className="pill">{tool.plugin}</span>
-              <p className="tool__desc">{tool.description}</p>
+              <p className="tool__desc">{describe(tool, t)}</p>
             </article>
           ))}
         </div>
