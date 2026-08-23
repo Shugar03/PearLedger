@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-# Regenera workspace/invoices/sample.png (factura nítida para OCR).
-# Es la única copia: la demo, el smoke y el dashboard leen todos de ahí.
-=======
-# Regenera tests/fixtures/demo/sample.png (factura nítida para OCR DocTR).
-# Alineada a workspace/purchase-orders/PO-2026-001.json
->>>>>>> 06b122a (perf(ocr): cachear DocTR en service mode y alinear fixture demo)
+# Regenera workspace/invoices/sample.png (factura nítida para OCR DocTR).
+# Única copia: demo, smoke y dashboard leen de ahí. Alineada a PO-2026-001.
 # Usage: powershell -File scripts/generate-demo-invoice.ps1
 
 $ErrorActionPreference = 'Stop'
@@ -60,14 +55,5 @@ $g.Dispose()
 $sample = Join-Path $outDir 'sample.png'
 $bmp.Save($sample, [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp.Dispose()
-<<<<<<< HEAD
-=======
-Copy-Item $sample $named -Force
 
-$ws = Join-Path $root 'workspace/invoices/sample.png'
-New-Item -ItemType Directory -Force -Path (Split-Path $ws) | Out-Null
-Copy-Item $sample $ws -Force
-
->>>>>>> 06b122a (perf(ocr): cachear DocTR en service mode y alinear fixture demo)
 Write-Host "Wrote $sample ($((Get-Item $sample).Length) bytes)"
-Write-Host "Copied to $ws"
