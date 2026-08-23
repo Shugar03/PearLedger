@@ -50,6 +50,47 @@ jobs:
       - name: Auditoría de dependencias
         run: npm audit --audit-level=high
 
+  dashboard-ui:
+    name: Renderer React (ui/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      # Sólo las dependencias del frontend: el harness no hace falta para
+      # compilar el bundle, y `npm run build` de la raíz omite este paso cuando
+      # `ui/node_modules` no existe.
+      - name: Instalar dependencias del renderer
+        run: npm ci --prefix ui
+
+      - name: Typecheck estricto del renderer
+        run: npm run typecheck --prefix ui
+
+      - name: Bundle de producción
+        run: npm run build --prefix ui
+
+      # El servidor inyecta el token de sesión sustituyendo este marcador en el
+      # HTML servido. Si Vite o un refactor lo borran, el dashboard arranca sin
+      # token y todas las llamadas a /api/* mueren con 401: mejor romper aquí.
+      - name: El marcador del token sobrevive al build
+        run: |
+          grep -q '__PEARLEDGER_SESSION_TOKEN__' dist/dashboard/web/index.html
+          echo "marcador del token OK"
+
+      - name: Sin recursos remotos en el HTML
+        run: |
+          if grep -Eq 'src="https?:|href="https?:' dist/dashboard/web/index.html; then
+            echo "el HTML pide algo a la red: la CSP default-src 'self' lo bloquearía"
+            exit 1
+          fi
+          echo "sin orígenes externos OK"
+
   smoke-bare:
     name: Arranque bajo Bare
     runs-on: ubuntu-latest

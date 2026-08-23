@@ -9,7 +9,6 @@
     "dist",
     "out",
     "ui",
-    "vendor",
-    "src/dashboard/web"
+    "vendor"
   ]
 }

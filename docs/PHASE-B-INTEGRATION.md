@@ -56,16 +56,20 @@ npm run dev -- balance
 
 **Rama sugerida:** `feat/ui-electron`
 
-**Scaffold:** `ui/` (dashboard Bento MVP)
+**Scaffold:** `ui/` (React + Vite, dashboard Bento MVP)
 
 ```bash
-npm run ui:dev
+npm run ui:install     # una vez
+npm run ui:dev         # Electron
+npm run ui:watch       # bundle en watch, para el dashboard web
 ```
 
 **Arquitectura:**
+- `ui/src/` — app React: `views/` (Inbox, Pagos, Forecast, Wallet), `components/`,
+  `context/PearProvider.tsx`, `lib/pear-web.ts` (puente del navegador)
 - `ui/electron/main.mjs` — IPC → `dist/ipc/bridge.js`
 - `ui/electron/preload.mjs` — `window.pear.*` seguro
-- `src/dashboard/web/` — pantallas Inbox, Pagos, Forecast, Wallet (renderer unificado)
+- `src/dashboard/` — servidor HTTP + SSE; sirve el bundle desde `dist/dashboard/web/`
 
 **API disponible en renderer:**
 

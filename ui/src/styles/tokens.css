@@ -1,0 +1,53 @@
+/*
+ * Paleta y escalas — tema doble por `prefers-color-scheme`.
+ *
+ * Ningún color se escribe suelto fuera de este archivo, así que el tema alterna
+ * entero sin que ningún componente se quede a medias.
+ *
+ * Sin `@import` ni fuentes remotas: la CSP del servidor es `default-src 'self'`
+ * y el bundle no puede pedir nada a la red.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f4f6f3;
+  --panel: #ffffff;
+  --panel-2: #f0f2ee;
+  --sunken: #eaeee7;
+  --text: #161a15;
+  --muted: #5f6b5c;
+  --border: #dde2d8;
+  --accent: #4c8b1f;
+  --accent-soft: #eaf5da;
+  --accent-ink: #ffffff;
+  --warn: #a06b00;
+  --warn-soft: #fdf3dc;
+  --danger: #b3261e;
+  --danger-soft: #fbe6e4;
+  --ok: #2f7d32;
+  --shadow: 0 1px 2px rgba(16, 24, 16, 0.06), 0 8px 24px rgba(16, 24, 16, 0.05);
+  --radius: 14px;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1110;
+    --panel: #171a18;
+    --panel-2: #1c211d;
+    --sunken: #101412;
+    --text: #eef2ea;
+    --muted: #8d9789;
+    --border: #2a302c;
+    --accent: #c4f53c;
+    --accent-soft: #232c17;
+    --accent-ink: #101210;
+    --warn: #ffd166;
+    --warn-soft: #33291333;
+    --danger: #ff6b6b;
+    --danger-soft: #3a202033;
+    --ok: #9be27a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}

@@ -107,5 +107,32 @@ const plugin = await import(`@plugins/${name}/index.js`)         // ❌
 
 ## 8. Tipos
 
-TypeScript en todo `src/`, `tests/` y `scripts/`. `strict` con
-`noUncheckedIndexedAccess`. Los `.mjs` sueltos sólo se admiten en el borde de Bare.
+TypeScript en todo `src/` y `scripts/`. `strict` con `noUncheckedIndexedAccess`.
+Los `.mjs` sueltos sólo se admiten en el borde de Bare y de Electron.
+
+Los tests viven junto al código que prueban (`src/**/*.test.ts`, con
+`node:test`), no en un árbol paralelo: el que rompe un módulo ve su test en la
+misma carpeta.
+
+## 9. Frontend: `ui/` es la única capa humana
+
+`src/` es el programa (Bare/Node) y `ui/` es la interfaz. La frontera es el
+puente `window.pear`; nada de `ui/` importa de `src/` en tiempo de ejecución, y
+`src/` no sirve más HTML que el `index.html` que emite Vite.
+
+| Carpeta | Qué es | Con qué se compila |
+|---|---|---|
+| `src/dashboard/` | servidor HTTP + SSE | `tsc` → `dist/dashboard/` |
+| `ui/src/` | app React del renderer | Vite → `dist/dashboard/web/` |
+| `ui/electron/` | shell de escritorio | se copia tal cual al empaquetar |
+
+Reglas propias del renderer, verificadas por `npm run ui:typecheck`:
+
+- Imports con el alias `@ui/*`; `./mismo-directorio` vale, `../` no.
+- TypeScript estricto, igual que `src/`. Los `.mjs` de `ui/electron/` son la
+  excepción: son el borde de Electron, como los de Bare.
+- Sin atributos `style` en línea, sin CDNs y sin fuentes remotas: la CSP del dev
+  server es `default-src 'self'` sin `unsafe-inline`. Todo el color sale de
+  `ui/src/styles/tokens.css`.
+- El bundle es un artefacto: `dist/dashboard/web/` no se commitea y se regenera
+  con `npm run build:web`.

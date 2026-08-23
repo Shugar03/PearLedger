@@ -1,4 +1,5 @@
-# Regenera tests/fixtures/demo/sample.png (factura nítida para OCR).
+# Regenera workspace/invoices/sample.png (factura nítida para OCR).
+# Es la única copia: la demo, el smoke y el dashboard leen todos de ahí.
 # Usage: powershell -File scripts/generate-demo-invoice.ps1
 
 $ErrorActionPreference = 'Stop'
@@ -7,7 +8,7 @@ Add-Type -AssemblyName System.Drawing
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -ErrorAction SilentlyContinue
 if (-not $root) { $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$outDir = Join-Path $root 'tests/fixtures/demo'
+$outDir = Join-Path $root 'workspace/invoices'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 $w = 900
@@ -48,11 +49,6 @@ foreach ($line in $lines) {
 $g.Dispose()
 
 $sample = Join-Path $outDir 'sample.png'
-$named = Join-Path $outDir 'invoice-inv-001.png'
 $bmp.Save($sample, [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp.Dispose()
-Copy-Item $sample $named -Force
-$ws = Join-Path $root 'workspace/invoices/sample.png'
-New-Item -ItemType Directory -Force -Path (Split-Path $ws) | Out-Null
-Copy-Item $sample $ws -Force
 Write-Host "Wrote $sample ($((Get-Item $sample).Length) bytes)"

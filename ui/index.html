@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PearLedger · Dashboard</title>
+
+    <!--
+      El token de sesión se inyecta aquí al servir el HTML (routes.ts).
+      Va en un meta (no en cookie, no en query string): así el cliente lo lee
+      con JS y lo manda en la cabecera X-PearLedger-Token, y nunca viaja solo
+      en peticiones que el navegador emita por su cuenta.
+
+      En Electron el placeholder se queda sin sustituir y no pasa nada: allí no
+      hay HTTP, el puente es IPC.
+    -->
+    <meta name="pearledger-token" content="__PEARLEDGER_SESSION_TOKEN__" />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8D%90%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

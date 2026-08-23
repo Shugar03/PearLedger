@@ -113,7 +113,13 @@ async function serveIndex(res: ServerResponse, ctx: RouteContext, head: boolean)
   try {
     html = await fs.promises.readFile(indexPath, 'utf8')
   } catch {
-    sendText(res, 500, `No se encontró el HTML del dashboard en ${indexPath}`, head)
+    sendText(
+      res,
+      500,
+      `No se encontró el HTML del dashboard en ${indexPath}. ` +
+        'Compilá el renderer con `npm run ui:install && npm run build:web`.',
+      head
+    )
     return
   }
 

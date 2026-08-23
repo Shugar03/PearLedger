@@ -49,8 +49,10 @@ pear install pear://<key>
 
 Basado en [hello-pear-bare @ `variant/daemon`](https://github.com/holepunchto/hello-pear-bare/tree/variant/daemon) — short-lived CLI con updater daemon detached.
 
+Dos árboles de código, una frontera explícita entre ellos:
+
 ```
-src/
+src/                el programa — TypeScript para Bare y Node, lo compila tsc
 ├── bin.ts          entrypoint Bare/Pear  →  dist/bin.js
 ├── dev.ts          entrypoint Node       →  dist/dev.js
 ├── core/      @core       harness: registro de tools, bus, pipeline de hooks
@@ -58,14 +60,32 @@ src/
 ├── shared/    @shared     logger (stderr), paths (sin cwd), metadatos
 ├── plugins/   @plugins    invoice-ops · procurement-forecast · wdk-settlement
 ├── cli/       @cli        comandos puros + un solo parser + presentación
-├── dashboard/ @dashboard  dev server node:http + SSE, y el renderer compartido
+├── dashboard/ @dashboard  dev server node:http + SSE — servidor, nada de HTML
 ├── ipc/       @ipc        fachada que consumen Electron y el dashboard
 ├── pear/      @pear       ciclo de vida del runtime Pear y del updater OTA
-└── workers/   @workers    MCP server de WDK
+├── workers/   @workers    MCP server de WDK
+└── scripts/               utilidades que se compilan y se ejecutan (smoke, seed…)
 
+ui/                 la interfaz — React + Vite, lo compila Vite
+├── src/            app del dashboard: views · components · context · hooks · lib
+├── electron/       shell de escritorio (main + preload)
+└── index.html      plantilla; el servidor le inyecta el token de sesión
+
+scripts/            tooling del repo, se ejecuta sin compilar (build, lint:rules)
+contracts/          contrato de tools, congelado y verificado en tests
+docs/               documentación y pitch deck
 workspace/          SOLO datos del usuario (facturas, órdenes de compra, stock)
 dist/               salida del build — es lo que ejecutan Bare y Node
+                    dist/dashboard/web/ ← bundle del renderer, lo emite Vite
 ```
+
+La frontera entre los dos árboles es el puente `window.pear`, con dos
+implementaciones — HTTP + SSE en el navegador, IPC en Electron — y un solo
+bundle React para las dos superficies. `ui/` no importa nada de `src/` en
+tiempo de ejecución, y `src/` no escribe una línea de HTML.
+
+Los tests viven junto al código que prueban (`src/**/*.test.ts`) y corren con
+`node:test` sobre `dist/`.
 
 Capas: QVAC SDK para OCR/LLM/RAG local · WDK para pagos gasless en USDt · Bare
 como runtime de producción (sin Node) · Pear `variant/daemon` para el OTA P2P.

@@ -50,26 +50,27 @@ export interface DashboardHandle {
 const DEFAULT_PORT_ATTEMPTS = 20
 
 /**
- * Localiza los estáticos de `web/`.
+ * Localiza los estáticos del renderer.
  *
- * `web/` está excluido de tsconfig (es JS de navegador, no se compila), así que
- * puede vivir en el árbol de fuentes durante el desarrollo o copiado a `dist/`
- * por el build. Se prueban ambos, y `dataDir()` como último recurso para el
- * binario standalone, donde el bundle es de sólo lectura.
+ * El renderer es la app React de `ui/`, que Vite compila a
+ * `dist/dashboard/web/` (`npm run build:web`). Aquí no se busca en `src/`: ahí
+ * ya no hay nada servible, sólo TypeScript de este servidor.
+ *
+ * `dataDir()` es el segundo candidato por el binario standalone, donde el
+ * bundle es de sólo lectura y los estáticos pueden haberse desplegado aparte.
  */
 export function resolveWebRoot(): string {
   const fromDist = path.join(appRoot(), 'dist', 'dashboard', 'web')
-  const fromSource = path.join(appRoot(), 'src', 'dashboard', 'web')
   const fromData = path.join(dataDir(), 'dashboard', 'web')
 
-  for (const candidate of [fromDist, fromSource, fromData]) {
+  for (const candidate of [fromDist, fromData]) {
     try {
       if (fs.existsSync(path.join(candidate, 'index.html'))) return candidate
     } catch {
       // Un candidato ilegible simplemente no es el bueno.
     }
   }
-  return fromSource
+  return fromDist
 }
 
 /** Escucha en un puerto concreto, siempre en loopback. Resuelve o rechaza. */

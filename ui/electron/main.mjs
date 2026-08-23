@@ -1,9 +1,12 @@
 /**
  * Proceso principal de Electron.
  *
- * Es un host más del mismo dashboard: sirve `dist/dashboard/web` y expone la
- * misma fachada `window.pear` que la versión web, pero sobre IPC en vez de
- * fetch/SSE. Un solo renderer para las dos superficies.
+ * Es un host más del mismo dashboard: carga el bundle React que Vite dejó en
+ * `dist/dashboard/web/` (el mismo que sirve el dev server) y expone la misma
+ * fachada `window.pear`, pero sobre IPC en vez de fetch/SSE. Un solo renderer
+ * para las dos superficies.
+ *
+ * La app React vive en `ui/src/`; aquí no hay una línea de interfaz.
  */
 
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
@@ -20,6 +23,7 @@ import { ensurePdfRasterized } from '../../dist/plugins/invoice-ops/image-input.
 import { shutdownQvacRuntime } from '../../dist/plugins/invoice-ops/qvac-client.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
+// Sale del bundle de Vite (`npm run ui:build`), no de `ui/`.
 const rendererDir = path.join(here, '..', '..', 'dist', 'dashboard', 'web')
 
 let mainWindow = null

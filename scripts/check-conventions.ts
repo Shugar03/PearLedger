@@ -29,8 +29,6 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry)
     if (statSync(full).isDirectory()) {
-      // `web/` es JavaScript de navegador: no le aplican las reglas de Node.
-      if (entry === 'web') continue
       walk(full, out)
     } else if (entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
       out.push(full)

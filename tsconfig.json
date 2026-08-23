@@ -67,8 +67,7 @@
     "dist",
     "out",
     "ui",
-    "vendor",
-    "src/dashboard/web"
+    "vendor"
   ],
   "tsc-alias": {
     "resolveFullPaths": true,

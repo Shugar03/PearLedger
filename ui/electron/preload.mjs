@@ -1,8 +1,12 @@
 /**
  * Fachada `window.pear` para Electron.
  *
- * Expone EXACTAMENTE la misma forma que `dashboard/web/pear-web.js` expone en
- * el navegador, de modo que un único `app.js` sirva a los dos hosts.
+ * Implementa el mismo contrato que `ui/src/lib/pear-web.ts` implementa para el
+ * navegador (`PearBridge`, declarado en `ui/src/lib/types.ts`), de modo que un
+ * único bundle React sirva a los dos hosts.
+ *
+ * Se expone antes de que corra una línea de React: `lib/bridge.ts` mira si
+ * `window.pear` ya existe y, si no, construye la versión HTTP + SSE.
  */
 import { contextBridge, ipcRenderer } from 'electron'
 
