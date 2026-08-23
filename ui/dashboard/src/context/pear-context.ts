@@ -7,14 +7,15 @@
  */
 import { createContext } from 'react'
 
-import type { DashboardEvent, PearBridge, StreamState, ToolParams } from '@dashboard/lib/types'
+import type { Status } from '@dashboard/lib/status'
 
-export type StatusKind = 'idle' | 'busy' | 'error'
-
-export interface Status {
-  text: string
-  kind: StatusKind
-}
+import type {
+  DashboardEvent,
+  PearBridge,
+  StreamState,
+  ToolParams,
+  WalletBalance
+} from '@dashboard/lib/types'
 
 export type ModelState = 'busy' | 'ready' | 'error'
 
@@ -42,6 +43,23 @@ export interface ActivityEntry {
   event: DashboardEvent
 }
 
+/**
+ * Una factura procesada en esta sesión.
+ *
+ * Vive en el contexto y no en la vista porque lo consumen dos pantallas: el
+ * formulario que la produce y la lista del Dashboard. No se persiste: al
+ * recargar, la sesión empieza limpia, igual que el panel de actividad.
+ */
+export interface IngestRecord {
+  id: string
+  path: string
+  vendor: string
+  total: string
+  /** El veredicto de `match_purchase_order`, o `no_match` si no llegó a correr. */
+  status: string
+  at: string
+}
+
 export interface PearMeta {
   /** `null` mientras no se sabe: la cabecera muestra un guion. */
   tools: number | null
@@ -52,12 +70,18 @@ export interface PearMeta {
 export interface PearContextValue {
   bridge: PearBridge
   status: Status
-  setStatus(text: string, kind?: StatusKind): void
+  setStatus(next: Status): void
   streamState: StreamState
   meta: PearMeta
   events: ActivityEntry[]
   counters: Counters
   clearActivity(): void
+  /** Facturas procesadas en esta sesión, la más reciente primero. */
+  ingests: IngestRecord[]
+  recordIngest(record: Omit<IngestRecord, 'id' | 'at'>): void
+  /** Último saldo consultado. `null` mientras nadie lo pidió. */
+  balance: WalletBalance | null
+  setBalance(value: WalletBalance): void
   /** Ejecuta una tool reflejando el progreso en la píldora de estado. */
   runTool<T = unknown>(name: string, params?: ToolParams): Promise<T>
 }

@@ -13,17 +13,25 @@ import {
   PearContext,
   type ActivityEntry,
   type CountedEvent,
+  type IngestRecord,
   type Counters,
   type PearContextValue,
-  type PearMeta,
-  type Status,
-  type StatusKind
+  type PearMeta
 } from '@dashboard/context/pear-context'
 import { getBridge } from '@dashboard/lib/bridge'
-import type { DashboardEvent, StreamState, ToolParams } from '@dashboard/lib/types'
+import { READY, type Status } from '@dashboard/lib/status'
+import type {
+  DashboardEvent,
+  StreamState,
+  ToolParams,
+  WalletBalance
+} from '@dashboard/lib/types'
 
 /** Tope de la lista en pantalla. El hub ya limita su propio historial. */
 const MAX_EVENTS = 120
+
+/** Facturas de la sesión que se guardan; más allá, la lista deja de servir. */
+const MAX_INGESTS = 40
 
 const ZERO_COUNTERS: Counters = {
   'tool:executing': 0,
@@ -43,15 +51,13 @@ function messageOf(err: unknown): string {
 export function PearProvider({ children }: { children: ReactNode }): ReactNode {
   const bridge = useMemo(getBridge, [])
 
-  const [status, setStatusState] = useState<Status>({ text: 'Listo', kind: 'idle' })
+  const [status, setStatus] = useState<Status>(READY)
   const [streamState, setStreamState] = useState<StreamState>('idle')
   const [events, setEvents] = useState<ActivityEntry[]>([])
   const [counters, setCounters] = useState<Counters>(ZERO_COUNTERS)
   const [meta, setMeta] = useState<PearMeta>({ tools: null, version: null, models: 'busy' })
-
-  const setStatus = useCallback((text: string, kind: StatusKind = 'idle') => {
-    setStatusState({ text, kind })
-  }, [])
+  const [ingests, setIngests] = useState<IngestRecord[]>([])
+  const [balance, setBalance] = useState<WalletBalance | null>(null)
 
   const setModels = useCallback((models: PearMeta['models']) => {
     setMeta((previous) => ({ ...previous, models }))
@@ -62,10 +68,13 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
     setCounters(ZERO_COUNTERS)
   }, [])
 
-  // `setStatus` cambiaría la identidad del efecto en cada render si se leyera
-  // directo; el ref lo mantiene estable y el efecto se monta una sola vez.
-  const statusRef = useRef(setStatus)
-  statusRef.current = setStatus
+  const recordIngest = useCallback((record: Omit<IngestRecord, 'id' | 'at'>) => {
+    setIngests((previous) => {
+      const id = `${Date.now()}-${previous.length}`
+      const entry: IngestRecord = { ...record, id, at: new Date().toISOString() }
+      return [entry, ...previous].slice(0, MAX_INGESTS)
+    })
+  }, [])
 
   const seqRef = useRef(0)
 
@@ -79,12 +88,12 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
       }
       if (event.type === 'harness:loading') {
         setModels('busy')
-        statusRef.current('Cargando modelos…', 'busy')
+        setStatus({ code: 'loadingModels', tone: 'busy' })
         return
       }
       if (event.type === 'harness:ready') {
         setModels('ready')
-        statusRef.current('Listo')
+        setStatus(READY)
         return
       }
 
@@ -97,16 +106,16 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
       }
 
       if (event.type === 'tool:blocked') {
-        statusRef.current('Acción bloqueada — requiere confirmación humana', 'error')
+        setStatus({ code: 'blocked', tone: 'error' })
       }
       if (event.type === 'tool:failed') {
-        statusRef.current('La tool falló', 'error')
+        setStatus({ code: 'failed', tone: 'error' })
       }
     })
 
     const offState = bridge.onStreamState?.(setStreamState)
     const offPolicy = bridge.onPolicyNotes?.((notes) => {
-      if (notes.length > 0) statusRef.current(`Política del servidor: ${notes[0]}`, 'busy')
+      if (notes.length > 0) setStatus({ code: 'policy', tone: 'busy', detail: notes[0] })
     })
 
     return () => {
@@ -125,11 +134,11 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
         const tools = await bridge.listTools()
         if (!alive) return
         setMeta((previous) => ({ ...previous, tools: tools.length, models: 'ready' }))
-        statusRef.current(`Listo · ${tools.length} tools`)
+        setStatus({ code: 'ready', tone: 'idle', detail: tools.length })
       } catch (err) {
         if (!alive) return
         setMeta((previous) => ({ ...previous, models: 'error' }))
-        statusRef.current(messageOf(err) || 'Sin harness', 'error')
+        setStatus({ code: 'error', tone: 'error', detail: messageOf(err) })
       }
 
       if (typeof bridge.health !== 'function') return
@@ -148,13 +157,13 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
 
   const runTool = useCallback(
     async <T,>(name: string, params: ToolParams = {}): Promise<T> => {
-      setStatus(`Ejecutando ${name}…`, 'busy')
+      setStatus({ code: 'running', tone: 'busy', detail: name })
       try {
         const result = (await bridge.execute(name, params)) as T
-        setStatus('Listo')
+        setStatus(READY)
         return result
       } catch (err) {
-        setStatus(messageOf(err) || 'Error', 'error')
+        setStatus({ code: 'error', tone: 'error', detail: messageOf(err) })
         throw err
       }
     },
@@ -171,9 +180,26 @@ export function PearProvider({ children }: { children: ReactNode }): ReactNode {
       events,
       counters,
       clearActivity,
+      ingests,
+      recordIngest,
+      balance,
+      setBalance,
       runTool
     }),
-    [bridge, status, setStatus, streamState, meta, events, counters, clearActivity, runTool]
+    [
+      bridge,
+      status,
+      setStatus,
+      streamState,
+      meta,
+      events,
+      counters,
+      clearActivity,
+      ingests,
+      recordIngest,
+      balance,
+      runTool
+    ]
   )
 
   return <PearContext value={value}>{children}</PearContext>

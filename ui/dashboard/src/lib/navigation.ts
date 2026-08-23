@@ -1,19 +1,26 @@
 /**
- * Las cuatro pantallas del dashboard, en un solo sitio.
+ * Las pantallas del dashboard, en un solo sitio.
  *
- * La barra lateral, el título de la cabecera y el `switch` de contenido leen de
- * aquí: añadir una vista es añadir una entrada y su componente, nunca tocar
- * tres archivos que se puedan desincronizar.
+ * Sin etiquetas: el texto sale del diccionario del idioma activo, indexado por
+ * la misma clave. Añadir una vista es añadir una entrada, su componente y su
+ * texto en los dos idiomas — y el typecheck avisa si falta alguno.
  */
-export const VIEWS = [
-  { key: 'inbox', label: 'Inbox', icon: '📄', title: 'Inbox de facturas' },
-  { key: 'pay', label: 'Pagos', icon: '💸', title: 'Cola de pagos' },
-  { key: 'forecast', label: 'Forecast', icon: '📈', title: 'Forecast de inventario' },
-  { key: 'wallet', label: 'Wallet', icon: '👛', title: 'Wallet de tesorería' }
-] as const
+import type { IconName } from '@dashboard/components/Icon'
 
-export type ViewKey = (typeof VIEWS)[number]['key']
-
-export function titleOf(key: ViewKey): string {
-  return VIEWS.find((view) => view.key === key)?.title ?? ''
+export interface ViewMeta {
+  key: 'home' | 'invoices' | 'pay' | 'forecast' | 'wallet' | 'tools'
+  icon: IconName
+  /** Los dos bloques de la barra lateral. */
+  group: 'main' | 'aside'
 }
+
+export const VIEWS: readonly ViewMeta[] = [
+  { key: 'home', icon: 'home', group: 'main' },
+  { key: 'invoices', icon: 'invoice', group: 'main' },
+  { key: 'pay', icon: 'bolt', group: 'main' },
+  { key: 'forecast', icon: 'chart', group: 'main' },
+  { key: 'wallet', icon: 'wallet', group: 'main' },
+  { key: 'tools', icon: 'tools', group: 'aside' }
+]
+
+export type ViewKey = ViewMeta['key']

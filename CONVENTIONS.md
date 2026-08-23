@@ -137,8 +137,17 @@ Reglas de las tres apps, verificadas por `npm run ui:typecheck`:
   excepción: son el borde de Electron, como los de Bare.
 - Todo el color sale del `styles/tokens.css` de cada app. En el dashboard,
   además, sin atributos `style` en línea y sin recursos remotos: su CSP es
-  `default-src 'self'` sin `unsafe-inline`. El deck y la landing sí cargan
-  fuentes remotas — son material de pitch, no el producto.
+  `default-src 'self'` sin `unsafe-inline`, así que el navegador descarta
+  cualquier `style=`. Lo que depende de un dato se dibuja en SVG, donde la
+  medida es un atributo. El deck y la landing sí cargan fuentes remotas — son
+  material de pitch, no el producto.
+- Todo par texto/fondo del dashboard llega a 4.5:1 (WCAG AA) en los dos temas.
+  Un color nuevo se mide antes de entrar en `tokens.css`, y un acento lleva dos
+  tintas: una para ir sobre su relleno y otra para ir sobre una superficie.
+- Ningún texto de cara al usuario se escribe en un componente: va en
+  `i18n/es.ts` y en `i18n/en.ts`. El typecheck avisa si falta en uno de los
+  dos. Lo mismo con el estado que muestra la cabecera: viaja como código
+  (`lib/status.ts`) y se traduce al pintarlo.
 - En `main.tsx` los CSS globales se importan ANTES que la app: los imports se
   evalúan en orden y de ahí depende que la hoja de cada componente se apile
   detrás del reset, no delante.

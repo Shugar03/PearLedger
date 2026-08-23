@@ -27,6 +27,67 @@ Cada app tiene la misma forma por dentro:
     └── …             views/ (dashboard), slides/ (deck), sections/ + tiles/ (site)
 ```
 
+El dashboard es una app de marco fijo: todo vive dentro de un rectángulo
+redondeado con un degradado pastel, y encima flotan tarjetas blancas. La barra
+lateral y el riel de actividad son columnas de altura completa; sólo scrollea el
+contenido del medio.
+
+```
+dashboard/src/
+├── App.tsx          marco + navegación entre vistas
+├── views/
+│   ├── HomeView     portada: dos KPI y las facturas de la sesión
+│   ├── InvoicesView OCR + conciliación, con sus pasos y su resumen
+│   ├── PaymentsView cotizar y simular, con el modal de confirmación
+│   ├── ForecastView proyección e inventario, en filas con medidor
+│   ├── WalletView   saldo, red y nativo
+│   └── ToolsView    el catálogo que expone el harness
+├── components/      Sidebar · TopBar · Rail · Card · Kpi · ProgressBar · …
+├── context/         puente, estado, eventos, facturas de la sesión
+└── styles/          tokens.css (paleta) + app.css (layout)
+```
+
+La barra de la cabecera es la acción principal — pegar la ruta de una factura y
+procesarla — y la campana cuenta las tools bloqueadas o fallidas. El riel
+derecho es el mismo stream de eventos del harness en dos formas: un círculo por
+ejecución y una tabla con las últimas.
+
+Una consecuencia práctica de su CSP (`style-src 'self'`, sin `unsafe-inline`):
+**ningún componente del dashboard puede usar `style={{…}}`**, porque el
+navegador descarta el atributo. Lo que depende de un dato, como el ancho de un
+medidor, se dibuja en SVG, donde la medida es un atributo y no un estilo
+(`components/MeterRow.tsx`, `components/ProgressBar.tsx`).
+
+### Tema e idioma
+
+Los dos se eligen desde la cabecera y se guardan en `localStorage`
+(`context/PrefsProvider.tsx`):
+
+- **Tema**: claro y oscuro, más un tercer estado — seguir al sistema — que es
+  el de arranque. El botón alterna entre los dos explícitos; la preferencia
+  viaja al `<html>` como `data-theme` y `tokens.css` la lee.
+- **Idioma**: español e inglés. Al arrancar se mira `navigator.languages`.
+  `i18n/es.ts` es el diccionario de referencia y `en.ts` se declara con su
+  tipo, así que una clave que falte rompe el typecheck en vez de dejar un hueco
+  en pantalla. Los textos con datos son funciones — el orden de las palabras
+  cambia entre idiomas.
+
+El estado que muestra la cabecera viaja como código, no como frase
+(`lib/status.ts`): el provider no sabe en qué idioma está la interfaz, y así
+cambiar de idioma no deja mensajes viejos colgados.
+
+### Contraste
+
+Los grises de la referencia de diseño no llegaban al 4.5:1 de WCAG AA. Los de
+`tokens.css` están medidos par por par en los dos temas; el más justo es
+`--text-faint` sobre `--surface-soft`, a 4.5:1. Dos reglas que salieron de ahí:
+
+- Un acento tiene dos tintas: la que va **sobre su relleno** (`--lime-ink`) y
+  la que va **sobre una superficie** (`--lime-text`). Confundirlas deja texto
+  casi negro sobre tarjeta casi negra en el tema oscuro.
+- Las píldoras de estado usan fondo suave con tinta oscura, no relleno saturado
+  con texto blanco: blanco sobre coral no pasa de 2.2:1.
+
 El servidor HTTP del dashboard **no** está acá: vive en `src/dashboard/` con el
 resto del programa Bare/Node.
 

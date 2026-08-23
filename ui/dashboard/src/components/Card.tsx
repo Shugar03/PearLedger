@@ -3,19 +3,31 @@ import type { ReactNode } from 'react'
 /** Contenedor estándar de cualquier bloque del dashboard. */
 export function Card({
   title,
-  description,
+  lead,
+  aside,
   className,
   children
 }: {
   title?: string
-  description?: ReactNode
+  lead?: ReactNode
+  /** Contenido alineado a la derecha del título: una píldora, un botón. */
+  aside?: ReactNode
   className?: string
   children?: ReactNode
 }): ReactNode {
+  const hasHead = Boolean(title || lead || aside)
+
   return (
     <section className={className ? `card ${className}` : 'card'}>
-      {title ? <h2>{title}</h2> : null}
-      {description ? <p className="muted">{description}</p> : null}
+      {hasHead ? (
+        <div className="card__head">
+          <div>
+            {title ? <h2 className="card__title">{title}</h2> : null}
+            {lead ? <p className="card__lead">{lead}</p> : null}
+          </div>
+          {aside}
+        </div>
+      ) : null}
       {children}
     </section>
   )

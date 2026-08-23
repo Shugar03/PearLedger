@@ -4,7 +4,9 @@ import { Card } from '@dashboard/components/Card'
 import { ConfirmDialog } from '@dashboard/components/ConfirmDialog'
 import { Field } from '@dashboard/components/Field'
 import { JsonBlock } from '@dashboard/components/JsonBlock'
+import { Kpi } from '@dashboard/components/Kpi'
 import { usePear } from '@dashboard/hooks/usePear'
+import { usePrefs } from '@dashboard/hooks/usePrefs'
 import { useToolResult } from '@dashboard/hooks/useToolResult'
 import { confirmThreshold } from '@dashboard/lib/bridge'
 
@@ -15,14 +17,21 @@ interface PendingConfirm {
 
 export function PaymentsView(): ReactNode {
   const { runTool, setStatus } = usePear()
+  const { t, locale } = usePrefs()
   const { result, pending, run } = useToolResult()
 
   const [vendor, setVendor] = useState('')
   const [amount, setAmount] = useState('250')
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null)
 
+  const money = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+
   const payload = { to: vendor.trim(), amount: Number(amount) || 0 }
   const threshold = confirmThreshold()
+  const overThreshold = payload.amount > threshold
 
   /** Abre el modal y espera la respuesta humana. */
   function ask(message: string): Promise<boolean> {
@@ -37,13 +46,12 @@ export function PaymentsView(): ReactNode {
 
   function payDryRun(): void {
     void run(async () => {
-      if (payload.amount > threshold) {
+      if (overThreshold) {
         const approved = await ask(
-          `La simulación de $${payload.amount} USDt supera el umbral de $${threshold}. ` +
-            'El dashboard sólo puede simular: la firma real exige el CLI.'
+          t.payments.confirmBody(money.format(payload.amount), money.format(threshold))
         )
         if (!approved) {
-          setStatus('Simulación cancelada', 'error')
+          setStatus({ code: 'cancelled', tone: 'error' })
           return { cancelled: true, amount: payload.amount, threshold }
         }
       }
@@ -61,55 +69,82 @@ export function PaymentsView(): ReactNode {
   }
 
   return (
-    <div className="view">
-      <Card
-        title="Cola de pagos"
-        description="El dashboard cotiza y simula. La firma real vive en el CLI, que sí tiene canal interactivo con un humano."
-      >
-        <div className="form-grid two">
-          <Field
-            label="Proveedor (0x…)"
-            value={vendor}
-            placeholder="0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-            onChange={(event) => setVendor(event.target.value)}
-          />
-          <Field
-            label="Monto USDt"
-            type="number"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-          />
+    <>
+      <div className="kpis">
+        <Kpi
+          label={t.payments.amount}
+          value={`${money.format(payload.amount)} USDt`}
+          badge={overThreshold ? t.payments.amountAsks : t.payments.amountDirect}
+          tone={overThreshold ? 'wait' : 'ok'}
+          note={overThreshold ? t.payments.amountNoteOver : t.payments.amountNoteUnder}
+        />
+        <Kpi
+          label={t.payments.threshold}
+          value={`${money.format(threshold)} USDt`}
+          note={t.payments.thresholdNote}
+        />
+      </div>
+
+      <Card title={t.payments.title} lead={t.payments.lead}>
+        <div className="card__body">
+          <div className="fields fields--two">
+            <Field
+              label={t.payments.vendor}
+              value={vendor}
+              placeholder="0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+              onChange={(event) => setVendor(event.target.value)}
+            />
+            <Field
+              label={t.payments.amountField}
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+            />
+          </div>
+
+          <div className="actions">
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={payDryRun}
+              disabled={pending}
+            >
+              {t.payments.simulate}
+            </button>
+            <button type="button" className="btn" onClick={quote} disabled={pending}>
+              {t.payments.quote}
+            </button>
+          </div>
+
+          <p className="note">
+            <b>{t.payments.note1}</b> <code>dryRun</code> {t.payments.note2} <code>true</code>{' '}
+            {locale === 'es' ? 'y' : 'and'} <code>confirmed</code> / <code>approvalId</code>{' '}
+            {t.payments.note3}
+          </p>
         </div>
+      </Card>
 
-        <div className="actions">
-          <button type="button" className="btn" onClick={quote} disabled={pending}>
-            Cotizar
-          </button>
-          <button type="button" className="btn primary" onClick={payDryRun} disabled={pending}>
-            Aprobar (dry-run)
-          </button>
+      <Card title={t.payments.resultTitle}>
+        <div className="card__body">
+          {result ? null : <p className="placeholder">{t.payments.resultEmpty}</p>}
+          <JsonBlock value={result} />
         </div>
-
-        <p className="note">
-          <b>Controles del servidor:</b> <code>dryRun</code> se fuerza a <code>true</code> y{' '}
-          <code>confirmed</code> / <code>approvalId</code> se eliminan de cualquier petición HTTP,
-          ignorando lo que mande el cliente.
-        </p>
-
-        <JsonBlock value={result} />
       </Card>
 
       {confirm ? (
         <ConfirmDialog
+          title={t.payments.confirmTitle}
           message={confirm.message}
+          confirmLabel={t.payments.confirmCta}
+          cancelLabel={t.payments.cancel}
           onClose={(confirmed) => {
             confirm.resolve(confirmed)
             setConfirm(null)
           }}
         />
       ) : null}
-    </div>
+    </>
   )
 }

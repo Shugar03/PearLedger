@@ -98,6 +98,38 @@ export interface MatchResult {
   status?: string
 }
 
+/**
+ * Formas de `check_inventory` y `run_usage_forecast`.
+ *
+ * Espejo de `src/plugins/procurement-forecast/types.ts`, donde el comentario de
+ * cabecera dice que estas claves son contrato público y no se renombran. Por
+ * eso la vista de forecast puede dibujar filas de verdad en vez de volcar JSON.
+ */
+export interface InventoryItem {
+  sku: string
+  description: string
+  stock: number
+  unit: string
+  dailyUsage: number
+  safetyThreshold: number
+  vendor: string
+  unitPrice: number
+}
+
+export interface ForecastResult {
+  sku: string
+  description?: string
+  currentStock: number
+  projectedConsumption: number
+  /** `null` cuando no hay quiebre proyectado dentro del horizonte. */
+  breakDate: string | null
+  belowThreshold: boolean
+  recommendedOrderQty: number
+  vendor?: string
+  unitPrice?: number
+  daysHorizon: number
+}
+
 export interface WalletBalance {
   usdt?: string
   network?: string

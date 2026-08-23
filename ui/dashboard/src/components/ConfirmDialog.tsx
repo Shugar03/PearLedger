@@ -9,10 +9,16 @@ import { useEffect, useRef, type ReactNode } from 'react'
  * cortesía de la UI, la barrera de verdad la pone el servidor.
  */
 export function ConfirmDialog({
+  title,
   message,
+  confirmLabel,
+  cancelLabel,
   onClose
 }: {
+  title: string
   message: string
+  confirmLabel: string
+  cancelLabel: string
   onClose(confirmed: boolean): void
 }): ReactNode {
   const ref = useRef<HTMLDialogElement | null>(null)
@@ -29,19 +35,19 @@ export function ConfirmDialog({
 
   return (
     <dialog
-      className="confirm-modal"
+      className="modal"
       ref={ref}
       onClose={() => onClose(ref.current?.returnValue === 'confirm')}
     >
-      <form method="dialog" className="confirm-card">
-        <h2>Confirmación requerida</h2>
-        <p className="muted">{message}</p>
+      <form method="dialog" className="modal__card">
+        <h2>{title}</h2>
+        <p>{message}</p>
         <div className="actions">
           <button type="submit" value="cancel" className="btn">
-            Cancelar
+            {cancelLabel}
           </button>
-          <button type="submit" value="confirm" className="btn primary">
-            Continuar
+          <button type="submit" value="confirm" className="btn btn--primary">
+            {confirmLabel}
           </button>
         </div>
       </form>
