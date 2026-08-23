@@ -15,7 +15,7 @@ describe('pearledger-mcp', () => {
     // local con WDK_USDT_MAINNET mal formado tumba getConfig() al arrancar hooks.
     const child = spawn(process.execPath, ['--use-system-ca', entry, '--status'], {
       cwd: appRoot(),
-      env: process.env,
+      env: process.env, // conventions:allow — reenvía env del runner al hijo --status
       stdio: ['ignore', 'pipe', 'pipe']
     })
 
