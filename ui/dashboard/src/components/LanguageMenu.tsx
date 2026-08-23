@@ -77,7 +77,11 @@ export function LanguageMenu(): ReactNode {
               >
                 <Flag locale={option} />
                 {t.languages[option]}
-                {option === locale ? <Icon name="check" size={14} /> : null}
+                {option === locale ? (
+                  <span className="lang__check">
+                    <Icon name="check" size={14} />
+                  </span>
+                ) : null}
               </button>
             </li>
           ))}

@@ -1271,7 +1271,12 @@ body {
   font-weight: 650;
 }
 
-.lang__option svg:last-child {
+/* El empuje a la derecha es del check y de nadie más: con `svg:last-child` la
+   bandera de la opción sin marcar también se iba al borde y las dos filas
+   quedaban desalineadas. */
+.lang__check {
+  display: grid;
+  place-items: center;
   margin-left: auto;
   color: var(--lime-text);
 }
