@@ -188,6 +188,23 @@ nav {
   font-variant-numeric: tabular-nums;
 }
 
+.meta-row b.ready {
+  color: var(--accent);
+}
+
+.meta-row b.busy {
+  color: var(--warn, #e6b84d);
+}
+
+.inbox-summary.status-matched {
+  border-left: 3px solid var(--accent);
+}
+
+.inbox-summary.status-vendor_mismatch,
+.inbox-summary.status-amount_mismatch {
+  border-left: 3px solid #e6b84d;
+}
+
 .tag-dry {
   color: var(--accent) !important;
   font-size: 0.7rem;

@@ -43,7 +43,7 @@ jobs:
         run: npm run lint:rules
 
       - name: Tests
-        run: node --test dist/
+        run: node --test "dist/**/*.test.js"
 
       - name: Auditoría de dependencias
         run: npm audit --audit-level=high
@@ -112,11 +112,35 @@ jobs:
           path: out/linux-x64/
           if-no-files-found: error
 
+  build-binary-win:
+    name: Binario standalone win32-x64
+    runs-on: windows-latest
+    needs: verify
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run make:win32-x64
+
+      - name: El binario arranca
+        shell: pwsh
+        run: ./out/win32-x64/pearledger.exe --no-updates --json tools
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pearledger-win32-x64
+          path: out/win32-x64/
+          if-no-files-found: error
+
   stage:
     name: Publicar release pear://
     runs-on: ubuntu-latest
-    needs: [smoke-bare, build-binary]
-    if: github.ref == 'refs/heads/main'
+    needs: [smoke-bare, build-binary, build-binary-win]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -132,6 +156,11 @@ jobs:
           name: pearledger-linux-x64
           path: out/linux-x64/
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: pearledger-win32-x64
+          path: out/win32-x64/
+
       # Flujo oficial de Pear v3: `pear build` arma el deployment dir
       # (package.json + by-arch/<host>/app/<bin>) y `pear stage` publica ESE
       # directorio, no el árbol de fuentes. El drive OTA lleva binarios, no JS:
@@ -143,6 +172,7 @@ jobs:
       - name: Preparar deployment dir
         run: |
           chmod +x out/linux-x64/pearledger
+          chmod +x out/win32-x64/pearledger.exe || true
           npx pear build --target ../pearledger-deployment
           ls -R ../pearledger-deployment | head -30
 
@@ -152,4 +182,14 @@ jobs:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           namespace: pearledger
           target: ../pearledger-deployment
-          dry-run: false
+          dry-run: ${{ github.event_name == 'pull_request' }}
+
+      - name: Validar release (pear info)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: npx pear info pear://rxqrpu8fxa8fes4izqr8gprfq1facxnr9b37tinxdkrpad7bkq5o
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pearledger-deployment
+          path: ../pearledger-deployment/
+          if-no-files-found: error

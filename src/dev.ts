@@ -11,6 +11,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { appRoot } from '@shared/paths.js'
+import { resetConfig } from '@config/index.js'
 import { main } from '@cli/run.js'
 import { createCliHost } from '@cli/host.js'
 
@@ -52,8 +53,8 @@ await main({
   argv: process.argv.slice(2),
   host: createCliHost(),
   onDashboard: async ({ port, open }) => {
-    // Import estático por alias: el dashboard sólo se usa bajo Node, pero el
-    // especificador es literal para que el grafo siga siendo analizable.
+    process.env.PEARLEDGER_SERVICE_MODE = '1'
+    resetConfig()
     const { startDashboard } = await import('@dashboard/server.js')
     await startDashboard({ port, open })
   }

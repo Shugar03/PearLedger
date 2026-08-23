@@ -7,9 +7,36 @@
   "main": "electron/main.mjs",
   "scripts": {
     "dev": "electron .",
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.pearledger.app",
+    "productName": "PearLedger",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "../dist/dashboard/web/**/*",
+      "../dist/ipc/**/*",
+      "../dist/**/*.js",
+      "!../dist/**/*.test.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../out/win32-x64",
+        "to": "bin",
+        "filter": ["pearledger.exe"]
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "PearLedger-${version}-Setup.${ext}"
+    }
   },
   "devDependencies": {
-    "electron": "^43.4.1"
+    "electron": "^43.4.1",
+    "electron-builder": "^25.1.8"
   }
 }

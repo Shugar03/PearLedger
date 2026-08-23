@@ -13,6 +13,9 @@
 
 import { createHarness, type Harness } from '@core/harness.js'
 import { loadPlugins } from '@core/loader.js'
+import { getConfig } from '@config/index.js'
+import { ensurePurchaseOrderIndex } from '@plugins/invoice-ops/matcher.js'
+import { preloadQvacModels } from '@plugins/invoice-ops/qvac-client.js'
 import type { HarnessEvent, ToolDescriptor, ToolParams } from '@core/types.js'
 
 /**
@@ -24,6 +27,10 @@ let bootstrap: Promise<Harness> | null = null
 async function bootstrapHarness(): Promise<Harness> {
   const harness = createHarness()
   await loadPlugins(harness, { withDefaultHooks: true, seal: true })
+  if (getConfig().service.mode) {
+    await preloadQvacModels()
+    await ensurePurchaseOrderIndex()
+  }
   return harness
 }
 

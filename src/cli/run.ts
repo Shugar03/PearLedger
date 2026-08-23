@@ -20,6 +20,7 @@ import { parseCli } from '@cli/program.js'
 import { renderBanner, renderHelp, renderResult, renderTools } from '@cli/render.js'
 import { createCliHost } from '@cli/host.js'
 import type { CliHost, Command, CommandContext } from '@cli/types.js'
+import { shutdownQvacRuntime } from '@plugins/invoice-ops/qvac-client.js'
 
 import { balance } from '@cli/commands/balance.js'
 import { forecast } from '@cli/commands/forecast.js'
@@ -124,6 +125,8 @@ export async function runCli(options: RunOptions): Promise<number> {
     log.error(message)
     if (json) renderResult({ error: message }, { json })
     return 1
+  } finally {
+    await shutdownQvacRuntime().catch(() => {})
   }
 }
 

@@ -206,6 +206,47 @@ async function serveTools(res: ServerResponse): Promise<void> {
   }
 }
 
+async function serveIngest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await readJsonBody(req)
+  if (!body.ok) {
+    sendJson(res, 400, { error: 'bad_request', message: body.message })
+    return
+  }
+
+  const payload = body.value as { filePath?: unknown } | null
+  const filePath = typeof payload?.filePath === 'string' ? payload.filePath.trim() : ''
+  if (!filePath) {
+    sendJson(res, 400, { error: 'bad_request', message: 'Se requiere { filePath }' })
+    return
+  }
+
+  const wall0 = Date.now()
+  try {
+    const parsed = await executeTool('parse_invoice', { filePath })
+    let match: unknown = null
+    const invoice =
+      parsed && typeof parsed === 'object' && 'invoice' in (parsed as object)
+        ? (parsed as { invoice: Record<string, unknown> }).invoice
+        : parsed
+
+    if (invoice && typeof invoice === 'object') {
+      const inv = invoice as Record<string, unknown>
+      const invoiceId = String(inv.invoiceNumber ?? inv.invoiceId ?? 'unknown')
+      match = await executeTool('match_purchase_order', { invoiceId, invoice: inv })
+    }
+
+    sendJson(res, 200, {
+      filePath,
+      timingMs: { total: Date.now() - wall0 },
+      parsed,
+      match
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    sendJson(res, 500, { error: 'ingest_failed', message })
+  }
+}
+
 async function serveExecute(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const body = await readJsonBody(req)
   if (!body.ok) {
@@ -278,6 +319,10 @@ export async function handleRequest(
     if (method === 'POST') {
       if (pathname === '/api/execute') {
         await serveExecute(req, res)
+        return
+      }
+      if (pathname === '/api/ingest') {
+        await serveIngest(req, res)
         return
       }
       sendJson(res, 404, { error: 'not_found', message: `Sin ruta POST para ${pathname}` })

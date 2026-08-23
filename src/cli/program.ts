@@ -52,7 +52,8 @@ function buildProgram(appName: string, appDescription: string): unknown {
   const ingestCmd = command(
     'ingest',
     summary('Ingesta y concilia una factura (OCR local + 3-way match)'),
-    arg('<file>', 'Ruta al archivo de la factura (PDF o imagen)'),
+    arg('<file>', 'Ruta al archivo de la factura (PDF o imagen) o directorio con --batch'),
+    flag('--batch', 'Procesar todos los PDF/PNG del directorio'),
     ...commonFlags()
   )
 
@@ -184,7 +185,8 @@ export function parseCli(
       network: asString(merged.network),
       dryRun: parseDryRun(merged.dryRun),
       purchaseOrderId: asString(merged.purchaseOrder),
-      payoutAddress: asString(merged.payoutAddress)
+      payoutAddress: asString(merged.payoutAddress),
+      batch: merged.batch === true
     }
   }
 }

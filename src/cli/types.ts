@@ -34,6 +34,7 @@ export interface CommandFlags {
   dryRun?: boolean
   purchaseOrderId?: string
   payoutAddress?: string
+  batch?: boolean
 }
 
 export interface CommandInput {

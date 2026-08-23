@@ -20,7 +20,6 @@ import { access, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 
-import { getConfig } from '@config/index.js'
 import { getLogger } from '@shared/logger.js'
 import { appRoot, ocrCacheDir } from '@shared/paths.js'
 
@@ -181,33 +180,124 @@ async function locate(filePath: string): Promise<string | null> {
   return (await exists(fromAppRoot)) ? fromAppRoot : null
 }
 
-/**
- * Resuelve PDF → PNG companion o imagen directa y, si procede, devuelve una
- * copia reducida para no desbordar el contexto del modelo multimodal.
- */
-export async function resolveInvoiceImagePath(filePath: string): Promise<string> {
-  const ext = path.extname(filePath).toLowerCase()
-  let resolved: string
+export interface ResolveImageOptions {
+  /**
+   * Lado largo máximo en píxeles. `false` = imagen original (recomendado para
+   * DocTR / EasyOCR). Sólo Path B multimodal necesita reducir.
+   */
+  maxEdge?: number | false
+}
 
+/**
+ * Rasteriza la primera página de un PDF a PNG (pdftoppm o Python/Pillow).
+ * Devuelve la ruta del PNG generado.
+ */
+async function rasterPdfFirstPage(pdfPath: string, pngPath: string): Promise<boolean> {
+  const outPrefix = pngPath.replace(/\.png$/i, '')
+  const pdftoppm = await new Promise<boolean>((resolve) => {
+    let child: ReturnType<typeof spawn>
+    try {
+      child = spawn(
+        'pdftoppm',
+        ['-png', '-singlefile', '-f', '1', '-l', '1', pdfPath, outPrefix],
+        { stdio: ['ignore', 'ignore', 'pipe'] }
+      )
+    } catch {
+      resolve(false)
+      return
+    }
+
+    let stderr = ''
+    child.stderr?.on('data', (chunk: unknown) => {
+      stderr += String(chunk)
+    })
+    child.on('error', () => resolve(false))
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(true)
+        return
+      }
+      log.debug(`pdftoppm falló (${code}): ${stderr.trim()}`)
+      resolve(false)
+    })
+  })
+  if (pdftoppm && (await exists(pngPath))) return true
+
+  const PDF_RASTER_SCRIPT = `
+import sys
+try:
+    import fitz
+except ImportError:
+    sys.exit(2)
+doc = fitz.open(sys.argv[1])
+pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2))
+pix.save(sys.argv[2])
+`
+
+  for (const interpreter of PYTHON_CANDIDATES) {
+    const ok = await new Promise<boolean>((resolve) => {
+      let child: ReturnType<typeof spawn>
+      try {
+        child = spawn(interpreter, ['-c', PDF_RASTER_SCRIPT, pdfPath, pngPath], {
+          stdio: ['ignore', 'ignore', 'pipe']
+        })
+      } catch {
+        resolve(false)
+        return
+      }
+      child.on('error', () => resolve(false))
+      child.on('close', (code) => resolve(code === 0))
+    })
+    if (ok && (await exists(pngPath))) {
+      log.info(`PDF rasterizado con ${interpreter}: ${pngPath}`)
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Si `filePath` es PDF y no existe el PNG companion, intenta rasterizarlo.
+ * Devuelve la ruta lista para OCR (imagen o PNG generado).
+ */
+export async function ensurePdfRasterized(filePath: string): Promise<string> {
+  const ext = path.extname(filePath).toLowerCase()
   if (IMAGE_EXTENSIONS.has(ext)) {
     const found = await locate(filePath)
     if (!found) throw new Error(`No se encontró la imagen: ${filePath}`)
-    resolved = found
-  } else if (ext === '.pdf') {
-    const pdf = (await locate(filePath)) ?? filePath
-    const pngPath = pdf.replace(/\.pdf$/i, '.png')
-    if (!(await exists(pngPath))) {
-      throw new Error(
-        `PDF requiere raster previo: generar ${pngPath} (pdftoppm -png "${pdf}" out)`
-      )
-    }
-    resolved = pngPath
-  } else {
+    return found
+  }
+
+  if (ext !== '.pdf') {
     throw new Error(`Formato no soportado para OCR: ${ext || '(sin extensión)'}`)
   }
 
-  const maxEdge = getConfig().qvac.ocrMaxEdge
-  if (!Number.isFinite(maxEdge) || maxEdge <= 0) return resolved
+  const pdf = (await locate(filePath)) ?? filePath
+  const pngPath = pdf.replace(/\.pdf$/i, '.png')
+  if (await exists(pngPath)) return pngPath
+
+  if (await rasterPdfFirstPage(pdf, pngPath)) return pngPath
+
+  throw new Error(
+    `PDF requiere raster previo: generar ${pngPath} (pdftoppm -png "${pdf}" out) o instalar PyMuPDF`
+  )
+}
+
+async function locateSource(filePath: string): Promise<string> {
+  return ensurePdfRasterized(filePath)
+}
+
+/**
+ * Resuelve la ruta de imagen y, si se pide, devuelve una copia reducida en cache.
+ */
+export async function resolveInvoiceImagePath(
+  filePath: string,
+  options: ResolveImageOptions = {}
+): Promise<string> {
+  const resolved = await locateSource(filePath)
+  const maxEdge = options.maxEdge ?? false
+  if (maxEdge === false || !Number.isFinite(maxEdge) || maxEdge <= 0) return resolved
 
   const cacheDir = ocrCacheDir()
   const base = path.basename(resolved, path.extname(resolved))

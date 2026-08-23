@@ -14,8 +14,10 @@
 import { completion } from '@qvac/sdk'
 import { z } from 'zod'
 
+import { getConfig } from '@config/index.js'
 import { getLogger } from '@shared/logger.js'
 
+import { fastParseInvoice } from './fast-parse.js'
 import { getLlmModelId } from './qvac-client.js'
 
 const log = getLogger('invoice-ops:schema')
@@ -107,6 +109,11 @@ function sanitizeInvoice(invoice: Invoice): Invoice {
   }
 }
 
+/** Tolerancia relativa para comparar montos (redondeos del OCR / LLM). */
+function amountTolerance(base: number): number {
+  return Math.max(0.02, Math.abs(base) * 0.02)
+}
+
 /** Heurísticas de calidad sobre el JSON ya validado por Zod. */
 export function assessInvoice(invoice: Invoice): InvoiceQuality {
   const issues: InvoiceIssue[] = []
@@ -129,9 +136,36 @@ export function assessInvoice(invoice: Invoice): InvoiceQuality {
 
   if (!/\d{4}/.test(invoice.date)) push('date', 'sin año reconocible', 'warning')
 
+  for (const [index, item] of invoice.lineItems.entries()) {
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+      push(`lineItems[${index}].quantity`, 'cantidad no positiva', 'warning')
+    }
+    const expectedLine = item.quantity * item.unitPrice
+    const lineGap = Math.abs(expectedLine - item.total)
+    if (lineGap > amountTolerance(item.total)) {
+      push(
+        `lineItems[${index}].total`,
+        `cantidad × precio no cierra (${expectedLine.toFixed(2)} vs ${item.total})`,
+        'warning'
+      )
+    }
+  }
+
+  if (invoice.lineItems.length > 0 && Number.isFinite(invoice.subtotal) && invoice.subtotal > 0) {
+    const linesSum = invoice.lineItems.reduce((sum, item) => sum + item.total, 0)
+    const subtotalGap = Math.abs(linesSum - invoice.subtotal)
+    if (subtotalGap > amountTolerance(invoice.subtotal)) {
+      push(
+        'subtotal',
+        `suma de líneas no coincide (ítems ${linesSum.toFixed(2)} vs subtotal ${invoice.subtotal})`,
+        'warning'
+      )
+    }
+  }
+
   if (Number.isFinite(invoice.total) && invoice.total > 0) {
     const arithmeticGap = Math.abs(invoice.subtotal + invoice.tax - invoice.total)
-    if (arithmeticGap > Math.max(0.02, invoice.total * 0.02)) {
+    if (arithmeticGap > amountTolerance(invoice.total)) {
       push('total', `subtotal + impuesto no cierra (dif. ${arithmeticGap.toFixed(2)})`, 'warning')
     }
   }
@@ -172,6 +206,21 @@ export async function parseInvoiceSchema(
   rawText: string,
   options: { strict?: boolean } = {}
 ): Promise<Invoice> {
+  const { invoice: invoiceCfg } = getConfig()
+
+  if (invoiceCfg.fastParse) {
+    const fast = fastParseInvoice(rawText, {
+      minConfidence: invoiceCfg.fastParseMinConfidence
+    })
+    if (fast) {
+      log.info(`fast-parse OK (conf=${fast.confidence.toFixed(2)})`)
+      const invoice = sanitizeInvoice(InvoiceSchema.parse(fast.invoice))
+      const quality = assessInvoice(invoice)
+      if (quality.ok || options.strict === false) return invoice
+      log.warn('fast-parse rechazado por calidad — fallback LLM')
+    }
+  }
+
   const modelId = await getLlmModelId()
 
   const run = completion({

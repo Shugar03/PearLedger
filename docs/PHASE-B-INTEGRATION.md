@@ -48,7 +48,7 @@ npm run dev -- balance
 - `dryRun: false` explícito para txs reales
 - QVAC: structured output y tool calls en llamadas **separadas**
 
-**Merge:** PR pequeño por plugin → rebase sobre `main` → `npm test` debe seguir en 13/13.
+**Merge:** PR pequeño por plugin → rebase sobre `main` → `npm test` debe seguir en verde.
 
 ---
 
@@ -65,15 +65,15 @@ npm run ui:dev
 **Arquitectura:**
 - `ui/electron/main.mjs` — IPC → `dist/ipc/bridge.js`
 - `ui/electron/preload.mjs` — `window.pear.*` seguro
-- `ui/renderer/` — pantallas Inbox, Pagos, Forecast, Wallet
+- `src/dashboard/web/` — pantallas Inbox, Pagos, Forecast, Wallet (renderer unificado)
 
 **API disponible en renderer:**
 
 ```javascript
 await window.pear.listTools()
 await window.pear.execute('parse_invoice', { filePath: '...' })
-await window.pear.pickPdf()
-window.pear.onEvent(({ type, tool, result }) => { /* ... */ })
+await window.pear.pickInvoice()
+window.pear.onEvent(({ type, tool, payload }) => { /* ... */ })
 ```
 
 **MVP hackathon (must):**
@@ -98,8 +98,8 @@ window.pear.onEvent(({ type, tool, result }) => { /* ... */ })
 
 ## Checklist integración E2E
 
-- [ ] Antony: `parse_invoice` retorna JSON usable por UI *(requiere `npm run models:download`)*
+- [x] Antony: `parse_invoice` retorna JSON usable por UI *(requiere `npm run models:download`)*
 - [x] Antony: `pay` dry-run OK en Sepolia/mainnet stub *(código en main; smoke CLI OK)*
-- [ ] Evelin: Inbox procesa PDF real vía `window.pear.execute`
+- [x] Evelin: Inbox procesa PDF/PNG vía `window.pear.execute` (Electron rasteriza PDF automáticamente)
 - [x] Evelin: Modal confirmación >$1k con `confirmed: true` *(scaffold en `ui/`)*
-- [ ] Demo: CLI (jurado técnico) + UI 30–60 s (jurado producto)
+- [x] Demo: CLI (jurado técnico) + UI 30–60 s (jurado producto) con fixture `workspace/invoices/sample.png`
