@@ -7,8 +7,8 @@ el harness se consume por el puente `window.pear`.
 ```
 ui/
 ├── dashboard/     el producto      → dist/dashboard/web/   (lo sirve el harness y lo carga Electron)
-├── deck/          pitch 3 min      → dist/pitch/deck/      (se abre a mano en el navegador)
-├── site/          landing pública  → dist/pitch/site/      (se abre a mano / se publica)
+├── deck/          pitch 3 min      → dist/pitch/deck/      (`npm run pitch:deck`, :4174)
+├── site/          landing pública  → dist/pitch/site/      (`npm run pitch:site`, :4175)
 ├── electron/      shell de escritorio del dashboard
 ├── vite.shared.ts configuración común de las tres
 └── tsconfig.json  un solo typecheck para las tres
@@ -86,12 +86,20 @@ No hay dev server de Vite a propósito: el token de sesión se inyecta al servir
 npm run ui:dev         # instala, compila harness + bundle, y abre la app
 ```
 
-**Deck y landing**:
+**Deck y landing** — compilan y levantan su servidor:
 
 ```bash
-npm run pitch:build    # compila los dos a dist/pitch/
-npm run pitch:deck     # watch del deck
-npm run pitch:site     # watch de la landing
+npm run pitch:deck     # http://localhost:4174
+npm run pitch:site     # http://localhost:4175
+```
+
+No los abras con doble clic sobre el HTML: los bundles son módulos ES y el
+navegador los bloquea servidos por `file://`. Para iterar sobre el diseño,
+`npm run pitch:deck:watch` / `pitch:site:watch` recompilan en cada cambio (con
+el preview corriendo en otra terminal).
+
+```bash
+npm run pitch:build    # sólo compilar los dos, sin servidor
 ```
 
 **Verificación**:

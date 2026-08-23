@@ -13,6 +13,8 @@
     "watch:dashboard": "vite build --watch --config dashboard/vite.config.ts",
     "watch:deck": "vite build --watch --config deck/vite.config.ts",
     "watch:site": "vite build --watch --config site/vite.config.ts",
+    "preview:deck": "vite preview --config deck/vite.config.ts --port 4174",
+    "preview:site": "vite preview --config site/vite.config.ts --port 4175",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "electron .",
     "start": "electron .",

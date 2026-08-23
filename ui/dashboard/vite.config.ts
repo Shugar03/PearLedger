@@ -12,6 +12,6 @@
 import { defineConfig } from 'vite'
 
 // Único `../` admitido en `ui/`: los alias no existen hasta que Vite los lee.
-import { defineApp } from '../vite.shared'
+import { defineApp } from '../vite.shared.ts'
 
 export default defineConfig(defineApp({ name: 'dashboard', outDir: 'dist/dashboard/web' }))

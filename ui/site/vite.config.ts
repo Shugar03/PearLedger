@@ -7,6 +7,6 @@
  */
 import { defineConfig } from 'vite'
 
-import { defineApp } from '../vite.shared'
+import { defineApp } from '../vite.shared.ts'
 
 export default defineConfig(defineApp({ name: 'site', outDir: 'dist/pitch/site' }))
