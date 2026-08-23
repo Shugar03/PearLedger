@@ -66,17 +66,19 @@ src/                el programa — TypeScript para Bare y Node, lo compila tsc
 ├── workers/   @workers    MCP server de WDK
 └── scripts/               utilidades que se compilan y se ejecutan (smoke, seed…)
 
-ui/                 la interfaz — React + Vite, lo compila Vite
-├── src/            app del dashboard: views · components · context · hooks · lib
-├── electron/       shell de escritorio (main + preload)
-└── index.html      plantilla; el servidor le inyecta el token de sesión
+ui/                 la interfaz — React + Vite, tres superficies
+├── dashboard/      el producto      → dist/dashboard/web/  (lo sirve el harness)
+├── deck/           pitch 3 min      → dist/pitch/deck/
+├── site/           landing pública  → dist/pitch/site/
+└── electron/       shell de escritorio del dashboard (main + preload)
 
 scripts/            tooling del repo, se ejecuta sin compilar (build, lint:rules)
 contracts/          contrato de tools, congelado y verificado en tests
-docs/               documentación y pitch deck
+docs/               documentación y el pitch deck en .pptx
 workspace/          SOLO datos del usuario (facturas, órdenes de compra, stock)
 dist/               salida del build — es lo que ejecutan Bare y Node
                     dist/dashboard/web/ ← bundle del renderer, lo emite Vite
+                    dist/pitch/        ← deck y landing, fuera del bundle P2P
 ```
 
 La frontera entre los dos árboles es el puente `window.pear`, con dos

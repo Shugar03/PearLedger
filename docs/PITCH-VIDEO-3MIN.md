@@ -2,9 +2,15 @@
 
 ## Cómo abrir el deck
 
-Abrí en el navegador (Chrome/Edge, F11 o tecla `F` para fullscreen):
+El deck es una app React (`ui/deck/`). Se compila una vez y se abre el HTML
+resultante en el navegador (Chrome/Edge, F11 o tecla `F` para fullscreen):
 
-[`docs/pitch-deck/index.html`](pitch-deck/index.html)
+```bash
+npm run ui:install     # una vez
+npm run pitch:build    # deck + landing
+```
+
+Queda en `dist/pitch/deck/index.html`.
 
 | Tecla | Acción |
 |-------|--------|

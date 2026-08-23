@@ -7,11 +7,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { App } from '@ui/App'
-import { PearProvider } from '@ui/context/PearProvider'
+import { App } from '@dashboard/App'
+import { PearProvider } from '@dashboard/context/PearProvider'
 
-import '@ui/styles/tokens.css'
-import '@ui/styles/app.css'
+import '@dashboard/styles/tokens.css'
+import '@dashboard/styles/app.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Falta el contenedor #root en index.html')

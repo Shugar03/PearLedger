@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react'
 
-import { Card } from '@ui/components/Card'
-import { ConfirmDialog } from '@ui/components/ConfirmDialog'
-import { Field } from '@ui/components/Field'
-import { JsonBlock } from '@ui/components/JsonBlock'
-import { usePear } from '@ui/hooks/usePear'
-import { useToolResult } from '@ui/hooks/useToolResult'
-import { confirmThreshold } from '@ui/lib/bridge'
+import { Card } from '@dashboard/components/Card'
+import { ConfirmDialog } from '@dashboard/components/ConfirmDialog'
+import { Field } from '@dashboard/components/Field'
+import { JsonBlock } from '@dashboard/components/JsonBlock'
+import { usePear } from '@dashboard/hooks/usePear'
+import { useToolResult } from '@dashboard/hooks/useToolResult'
+import { confirmThreshold } from '@dashboard/lib/bridge'
 
 interface PendingConfirm {
   message: string

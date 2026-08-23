@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react'
 
-import { Card } from '@ui/components/Card'
-import { Field } from '@ui/components/Field'
-import { JsonBlock } from '@ui/components/JsonBlock'
-import { usePear } from '@ui/hooks/usePear'
-import { useToolResult } from '@ui/hooks/useToolResult'
-import type { ToolParams } from '@ui/lib/types'
+import { Card } from '@dashboard/components/Card'
+import { Field } from '@dashboard/components/Field'
+import { JsonBlock } from '@dashboard/components/JsonBlock'
+import { usePear } from '@dashboard/hooks/usePear'
+import { useToolResult } from '@dashboard/hooks/useToolResult'
+import type { ToolParams } from '@dashboard/lib/types'
 
 export function ForecastView(): ReactNode {
   const { runTool } = usePear()

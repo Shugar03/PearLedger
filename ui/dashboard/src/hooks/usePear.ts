@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 
-import { PearContext, type PearContextValue } from '@ui/context/pear-context'
+import { PearContext, type PearContextValue } from '@dashboard/context/pear-context'
 
 export function usePear(): PearContextValue {
   const value = useContext(PearContext)

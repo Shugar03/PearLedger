@@ -1,0 +1,78 @@
+/*
+ * Estilos de <Privacy />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.pv {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(36px, 4vw, 64px);
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .pv {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pv__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 26px;
+  padding-right: 8px;
+}
+
+.pv__list {
+  display: grid;
+}
+
+.pv__item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 22px;
+  align-items: start;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--ink-line);
+}
+
+.pv__item:last-child {
+  border-bottom: 1px solid var(--ink-line);
+}
+
+.pv__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: rgb(255 255 255 / 0.05);
+  color: var(--accent);
+}
+
+.pv__title {
+  font-size: 0.9375rem;
+  margin-bottom: 4px;
+}
+
+.pv__body {
+  font-size: 0.8125rem;
+  color: var(--text-invert-muted);
+}
+
+.pv__check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+}

@@ -6,8 +6,8 @@
  * detección mira que exista `execute`, no la marca `host`: si el preload
  * cambiase de forma queremos enterarnos aquí y no tres capas más abajo.
  */
-import { createWebBridge } from '@ui/lib/pear-web'
-import type { PearBridge } from '@ui/lib/types'
+import { createWebBridge } from '@dashboard/lib/pear-web'
+import type { PearBridge } from '@dashboard/lib/types'
 
 declare global {
   interface Window {

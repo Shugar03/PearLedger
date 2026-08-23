@@ -7,7 +7,7 @@
  */
 import { createContext } from 'react'
 
-import type { DashboardEvent, PearBridge, StreamState, ToolParams } from '@ui/lib/types'
+import type { DashboardEvent, PearBridge, StreamState, ToolParams } from '@dashboard/lib/types'
 
 export type StatusKind = 'idle' | 'busy' | 'error'
 

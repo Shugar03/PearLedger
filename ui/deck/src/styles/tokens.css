@@ -1,0 +1,17 @@
+/*
+ * Paleta del deck — la misma lima de la marca sobre lienzo oscuro.
+ *
+ * Es un tema fijo: un deck se proyecta, no sigue el modo del sistema.
+ */
+
+:root {
+  --canvas: #0c0e10;
+  --canvas-2: #14181c;
+  --surface: #1a1f24;
+  --lime: #c4f53c;
+  --lime-dim: #9bc22e;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --line: rgba(243, 244, 246, 0.08);
+  --danger: #ff6b4a;
+}

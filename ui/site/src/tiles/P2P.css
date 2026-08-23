@@ -1,0 +1,45 @@
+/*
+ * Estilos de <P2P />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.p2p__net {
+  width: 100%;
+  max-width: 116px;
+  height: auto;
+  margin: auto;
+}
+
+.p2p__net line {
+  stroke: var(--ink-line);
+  stroke-width: 1.4;
+}
+
+.p2p__net circle {
+  fill: var(--accent);
+  animation: blink 3.2s ease-in-out infinite;
+  animation-delay: calc(var(--d) * 420ms);
+}
+
+.p2p__hub {
+  fill: var(--accent) !important;
+  animation: none !important;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p2p__net circle {
+    opacity: 0.85;
+  }
+}

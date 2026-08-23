@@ -1,0 +1,47 @@
+/*
+ * Estilos de <Cta />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.ct {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.ct__tagline {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.ct__title {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+
+.ct__body {
+  margin-top: 10px;
+  color: var(--text-invert-muted);
+}
+
+.ct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .ct {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 22px;
+  }
+}

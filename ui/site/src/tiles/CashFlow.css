@@ -1,0 +1,82 @@
+/*
+ * Estilos de <CashFlow />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.cf {
+  margin: 0;
+}
+
+.cf__cap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+.cf__last {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cf svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.cf__axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.cf__group {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i) * 45ms);
+  cursor: pointer;
+}
+
+.cf__hit {
+  fill: transparent;
+}
+
+.cf__bar {
+  fill: var(--ink);
+  fill-opacity: 0.82;
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transition:
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      fill-opacity 0.22s ease;
+}
+
+.cf__bars:hover .cf__bar {
+  fill-opacity: 0.26;
+}
+
+.cf__bars .cf__group:hover .cf__bar {
+  fill-opacity: 1;
+  transform: scaleY(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf__group {
+    transform: scaleY(1);
+  }
+  .cf__bars .cf__group:hover .cf__bar {
+    transform: none;
+  }
+}

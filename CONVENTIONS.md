@@ -123,16 +123,24 @@ puente `window.pear`; nada de `ui/` importa de `src/` en tiempo de ejecución, y
 | Carpeta | Qué es | Con qué se compila |
 |---|---|---|
 | `src/dashboard/` | servidor HTTP + SSE | `tsc` → `dist/dashboard/` |
-| `ui/src/` | app React del renderer | Vite → `dist/dashboard/web/` |
+| `ui/dashboard/` | app React del producto | Vite → `dist/dashboard/web/` |
+| `ui/deck/` | pitch deck de 3 min | Vite → `dist/pitch/deck/` |
+| `ui/site/` | landing pública | Vite → `dist/pitch/site/` |
 | `ui/electron/` | shell de escritorio | se copia tal cual al empaquetar |
 
-Reglas propias del renderer, verificadas por `npm run ui:typecheck`:
+Reglas de las tres apps, verificadas por `npm run ui:typecheck`:
 
-- Imports con el alias `@ui/*`; `./mismo-directorio` vale, `../` no.
+- Imports con el alias de la app (`@dashboard/*`, `@deck/*`, `@site/*`);
+  `./mismo-directorio` vale, `../` no. Única excepción: los `vite.config.ts`,
+  que corren antes de que los alias existan.
 - TypeScript estricto, igual que `src/`. Los `.mjs` de `ui/electron/` son la
   excepción: son el borde de Electron, como los de Bare.
-- Sin atributos `style` en línea, sin CDNs y sin fuentes remotas: la CSP del dev
-  server es `default-src 'self'` sin `unsafe-inline`. Todo el color sale de
-  `ui/src/styles/tokens.css`.
-- El bundle es un artefacto: `dist/dashboard/web/` no se commitea y se regenera
-  con `npm run build:web`.
+- Todo el color sale del `styles/tokens.css` de cada app. En el dashboard,
+  además, sin atributos `style` en línea y sin recursos remotos: su CSP es
+  `default-src 'self'` sin `unsafe-inline`. El deck y la landing sí cargan
+  fuentes remotas — son material de pitch, no el producto.
+- En `main.tsx` los CSS globales se importan ANTES que la app: los imports se
+  evalúan en orden y de ahí depende que la hoja de cada componente se apile
+  detrás del reset, no delante.
+- Los bundles son artefactos: `dist/dashboard/web/` y `dist/pitch/` no se
+  commitean; se regeneran con `npm run build:web` y `npm run pitch:build`.

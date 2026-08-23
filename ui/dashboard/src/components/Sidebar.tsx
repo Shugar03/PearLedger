@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { usePear } from '@ui/hooks/usePear'
-import { VIEWS, type ViewKey } from '@ui/lib/navigation'
+import { usePear } from '@dashboard/hooks/usePear'
+import { VIEWS, type ViewKey } from '@dashboard/lib/navigation'
 
 const MODEL_LABEL = {
   busy: 'Cargando…',

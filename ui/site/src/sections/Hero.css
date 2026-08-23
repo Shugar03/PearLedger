@@ -1,0 +1,79 @@
+/*
+ * Estilos de <Hero />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--text-invert);
+  padding-block: clamp(56px, 7vw, 96px) clamp(64px, 8vw, 104px);
+}
+
+.hero__glow {
+  position: absolute;
+  inset: -30% -10% -20%;
+  background: radial-gradient(40% 44% at 50% 40%, rgb(196 245 60 / 0.13), transparent 70%);
+  pointer-events: none;
+}
+
+.hero__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(44px, 5vw, 68px);
+}
+
+.hero__copy {
+  text-align: center;
+  max-width: 780px;
+}
+
+.hero__eyebrow {
+  margin-bottom: 26px;
+}
+
+.hero__headline {
+  font-size: clamp(1.75rem, 4vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.hero__line {
+  display: block;
+}
+
+.hero__accent {
+  color: var(--accent);
+}
+
+.hero__sub {
+  margin: 20px auto 0;
+  max-width: 52ch;
+  font-size: clamp(0.9375rem, 1.2vw, 1.0625rem);
+  color: var(--text-invert-muted);
+}
+
+.hero__actions, .hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.hero__badges {
+  gap: 9px;
+  margin-top: 30px;
+}
+
+.hero__preview {
+  width: 100%;
+  max-width: 620px;
+  transition-delay: 0.12s;
+}

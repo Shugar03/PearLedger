@@ -50,8 +50,8 @@ jobs:
       - name: Auditoría de dependencias
         run: npm audit --audit-level=high
 
-  dashboard-ui:
-    name: Renderer React (ui/)
+  ui:
+    name: Superficies React (ui/)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -69,10 +69,11 @@ jobs:
       - name: Instalar dependencias del renderer
         run: npm ci --prefix ui
 
-      - name: Typecheck estricto del renderer
+      # Un solo tsconfig cubre dashboard, deck y landing.
+      - name: Typecheck estricto
         run: npm run typecheck --prefix ui
 
-      - name: Bundle de producción
+      - name: Bundles de producción (dashboard + deck + landing)
         run: npm run build --prefix ui
 
       # El servidor inyecta el token de sesión sustituyendo este marcador en el
@@ -83,13 +84,21 @@ jobs:
           grep -q '__PEARLEDGER_SESSION_TOKEN__' dist/dashboard/web/index.html
           echo "marcador del token OK"
 
-      - name: Sin recursos remotos en el HTML
+      # Sólo el dashboard: el deck y la landing sí cargan fuentes remotas, que
+      # para material de pitch es aceptable y para el producto no.
+      - name: Sin recursos remotos en el HTML del dashboard
         run: |
           if grep -Eq 'src="https?:|href="https?:' dist/dashboard/web/index.html; then
             echo "el HTML pide algo a la red: la CSP default-src 'self' lo bloquearía"
             exit 1
           fi
-          echo "sin orígenes externos OK"
+          echo "sin origenes externos OK"
+
+      - name: El deck y la landing se compilaron
+        run: |
+          test -f dist/pitch/deck/index.html
+          test -f dist/pitch/site/index.html
+          echo "deck y landing OK"
 
   smoke-bare:
     name: Arranque bajo Bare

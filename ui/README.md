@@ -1,39 +1,44 @@
 # `ui/` — capa humana de PearLedger
 
-Todo lo que ve una persona vive acá: la app React del dashboard y el shell de
-Electron que la empaqueta como app de escritorio. Ni una línea de lógica de
-negocio — el harness se consume por el puente `window.pear`.
+Todo lo que ve una persona vive acá. Tres superficies React + TypeScript, un
+solo `package.json` y un shell de Electron. Ni una línea de lógica de negocio:
+el harness se consume por el puente `window.pear`.
 
 ```
 ui/
-├── index.html            plantilla de Vite (aquí se inyecta el token de sesión)
-├── vite.config.ts        build → ../dist/dashboard/web
-├── src/                  app React (TypeScript estricto)
-│   ├── main.tsx          monta <App> dentro de <PearProvider>
-│   ├── App.tsx           layout de tres columnas + vista activa
-│   ├── views/            Inbox · Pagos · Forecast · Wallet
-│   ├── components/       Sidebar, TopBar, ActivityPanel, Card, Field…
-│   ├── context/          PearProvider: puente, estado, eventos
-│   ├── hooks/            usePear, useToolResult
-│   ├── lib/              puente del navegador (fetch + SSE), tipos, navegación
-│   └── styles/           tokens.css (paleta) + app.css (layout)
-└── electron/
-    ├── main.mjs          ipcMain → dist/ipc/bridge.js + diálogo nativo
-    └── preload.mjs       window.pear sobre IPC
+├── dashboard/     el producto      → dist/dashboard/web/   (lo sirve el harness y lo carga Electron)
+├── deck/          pitch 3 min      → dist/pitch/deck/      (se abre a mano en el navegador)
+├── site/          landing pública  → dist/pitch/site/      (se abre a mano / se publica)
+├── electron/      shell de escritorio del dashboard
+├── vite.shared.ts configuración común de las tres
+└── tsconfig.json  un solo typecheck para las tres
 ```
 
-El servidor HTTP del dashboard **no** está aquí: vive en `src/dashboard/` con el
+Cada app tiene la misma forma por dentro:
+
+```
+<app>/
+├── index.html        plantilla de Vite
+├── vite.config.ts    root + destino del bundle
+└── src/
+    ├── main.tsx      monta la app
+    ├── components/   piezas reutilizables
+    ├── styles/       tokens.css + hoja base
+    └── …             views/ (dashboard), slides/ (deck), sections/ + tiles/ (site)
+```
+
+El servidor HTTP del dashboard **no** está acá: vive en `src/dashboard/` con el
 resto del programa Bare/Node.
 
-## Un renderer, dos hosts
+## Dashboard: un renderer, dos hosts
 
-`ui/src` no sabe en qué host corre. Habla con `PearBridge`
+`ui/dashboard/src` no sabe en qué host corre. Habla con `PearBridge`
 (`src/lib/types.ts`), que implementan:
 
 | Host | Implementación | Transporte |
 |---|---|---|
 | Navegador | `src/lib/pear-web.ts` | `fetch` + SSE sobre `fetch` contra `127.0.0.1:7331` |
-| Electron | `electron/preload.mjs` | IPC con el proceso principal |
+| Electron | `../electron/preload.mjs` | IPC con el proceso principal |
 
 Diferencias reales, resueltas por presencia y no por `if (electron)`:
 
@@ -42,6 +47,21 @@ Diferencias reales, resueltas por presencia y no por `if (electron)`:
   no expone rutas del disco.
 - `onStreamState()` / `health()` sólo existen en la web: en Electron no hay
   stream HTTP que vigilar.
+
+## Deck y landing
+
+Los dos salieron de un export de diseño en HTML (`docs/pitch-deck/`, ya
+borrado del repo) y hoy son componentes:
+
+- **deck** — cinco diapositivas, navegación por teclado (`→`, `←`, `1`-`5`, `F`)
+  y contador. El guion y los tiempos, en `docs/PITCH-VIDEO-3MIN.md`.
+- **site** — landing en inglés: `sections/` para las seis secciones, `tiles/`
+  para el bento del dashboard, `components/` para `Icon` y `Mascot`. Las nueve
+  imágenes que venían en base64 dentro del HTML son archivos en `src/assets/`.
+
+Los dos cargan fuentes remotas (Google Fonts, Fontshare) con respaldo del
+sistema. Es material de presentación, no el producto: la regla local-first
+aplica al dashboard, que no pide nada a la red.
 
 ## Desarrollo
 
@@ -66,19 +86,32 @@ No hay dev server de Vite a propósito: el token de sesión se inyecta al servir
 npm run ui:dev         # instala, compila harness + bundle, y abre la app
 ```
 
+**Deck y landing**:
+
+```bash
+npm run pitch:build    # compila los dos a dist/pitch/
+npm run pitch:deck     # watch del deck
+npm run pitch:site     # watch de la landing
+```
+
 **Verificación**:
 
 ```bash
-npm run ui:typecheck   # tsc estricto sobre ui/src
-npm run ui:build       # bundle de producción
+npm run ui:typecheck   # tsc estricto sobre las tres apps
+npm run ui:build       # los tres bundles de producción
 ```
 
 ## Convenciones del frontend
 
-- Imports con el alias `@ui/*`, nunca `../` (mismo criterio que `src/`, ver
-  [CONVENTIONS.md](../CONVENTIONS.md)).
-- Nada de atributos `style` en línea ni recursos remotos: la CSP del servidor es
-  `default-src 'self'` sin `unsafe-inline`. Todo color sale de `styles/tokens.css`.
+- Imports con el alias de la app (`@dashboard/*`, `@deck/*`, `@site/*`), nunca
+  `../` (mismo criterio que `src/`, ver [CONVENTIONS.md](../CONVENTIONS.md)).
+  La excepción es `vite.config.ts`, que corre antes de que existan los alias.
+- Todo color sale de `styles/tokens.css`. En el dashboard, además, nada de
+  atributos `style` en línea ni recursos remotos: su CSP es `default-src 'self'`
+  sin `unsafe-inline`.
+- El orden de los `import` de CSS es parte del diseño: en `main.tsx` van primero
+  los tokens y la hoja base, y después la app, para que la hoja de cada
+  componente se apile detrás.
 - React y Vite son `devDependencies`: el bundle se compila antes de empaquetar,
   así que no viajan dentro del instalador.
 
@@ -88,4 +121,4 @@ npm run ui:build       # bundle de producción
 npm run ui:pack:win    # harness + binario Bare + bundle + instalador NSIS
 ```
 
-El instalador queda en `ui/release/`.
+El instalador queda en `ui/release/` y lleva sólo el dashboard.

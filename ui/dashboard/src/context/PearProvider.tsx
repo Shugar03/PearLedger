@@ -18,9 +18,9 @@ import {
   type PearMeta,
   type Status,
   type StatusKind
-} from '@ui/context/pear-context'
-import { getBridge } from '@ui/lib/bridge'
-import type { DashboardEvent, StreamState, ToolParams } from '@ui/lib/types'
+} from '@dashboard/context/pear-context'
+import { getBridge } from '@dashboard/lib/bridge'
+import type { DashboardEvent, StreamState, ToolParams } from '@dashboard/lib/types'
 
 /** Tope de la lista en pantalla. El hub ya limita su propio historial. */
 const MAX_EVENTS = 120

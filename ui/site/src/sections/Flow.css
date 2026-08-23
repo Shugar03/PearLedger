@@ -1,0 +1,163 @@
+/*
+ * Estilos de <Flow />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.fw__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px 32px;
+  margin-bottom: clamp(32px, 4vw, 56px);
+}
+
+.fw__head {
+  margin-bottom: 0;
+}
+
+.fw__audience {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.fw__cols {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px minmax(0, 1.15fr);
+  gap: 16px;
+  padding-bottom: 12px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fw__col--before {
+  grid-column: 2;
+  color: var(--text-invert-muted);
+}
+
+.fw__col--after {
+  grid-column: 4;
+  color: var(--accent);
+}
+
+.fw__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px minmax(0, 1.15fr);
+  align-items: center;
+  gap: 16px;
+  padding: 22px 0;
+  border-top: 1px solid var(--ink-line);
+}
+
+.fw__row:last-child {
+  border-bottom: 1px solid var(--ink-line);
+}
+
+.fw__n {
+  font-size: 0.75rem;
+  color: var(--text-invert-muted);
+  opacity: 0.6;
+}
+
+.fw__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: none;
+  vertical-align: -5px;
+  margin-right: 9px;
+}
+
+.fw__mark--x {
+  position: relative;
+  background: rgb(255 255 255 / 0.07);
+}
+
+.fw__mark--x::before {
+  content: '';
+  width: 8px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--text-invert-muted);
+}
+
+.fw__mark--ok {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.fw__before {
+  font-size: 0.9375rem;
+  color: var(--text-invert-muted);
+}
+
+.fw__arrow {
+  text-align: center;
+  color: var(--accent);
+  font-size: 1.125rem;
+}
+
+.fw__after {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+
+.fw__step {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-invert);
+  white-space: nowrap;
+}
+
+.fw__text {
+  font-size: 0.9375rem;
+  color: var(--text-invert);
+}
+
+.fw__tool {
+  justify-self: end;
+  padding: 3px 10px;
+  border: 1px solid var(--ink-line);
+  border-radius: var(--r-pill);
+  font-size: 0.6875rem;
+  color: var(--text-invert-muted);
+}
+
+@media (max-width: 860px) {
+  .fw__cols {
+    display: none;
+  }
+  .fw__row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+    row-gap: 12px;
+  }
+  .fw__before {
+    grid-column: 2;
+  }
+  .fw__arrow {
+    grid-column: 1;
+    text-align: left;
+    transform: rotate(90deg);
+  }
+  .fw__after {
+    grid-column: 2;
+    grid-template-columns: 1fr;
+  }
+  .fw__tool {
+    justify-self: start;
+  }
+}

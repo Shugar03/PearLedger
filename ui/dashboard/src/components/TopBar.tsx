@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { usePear } from '@ui/hooks/usePear'
-import type { StreamState } from '@ui/lib/types'
+import { usePear } from '@dashboard/hooks/usePear'
+import type { StreamState } from '@dashboard/lib/types'
 
 /** Cada estado del stream con su clase y su texto, sin cadenas sueltas. */
 const STREAM: Record<StreamState, { className: string; label: string }> = {

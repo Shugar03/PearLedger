@@ -6,7 +6,7 @@
  * fachada `window.pear`, pero sobre IPC en vez de fetch/SSE. Un solo renderer
  * para las dos superficies.
  *
- * La app React vive en `ui/src/`; aquí no hay una línea de interfaz.
+ * La app React vive en `ui/dashboard/`; aquí no hay una línea de interfaz.
  */
 
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'

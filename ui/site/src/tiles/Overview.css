@@ -1,0 +1,99 @@
+/*
+ * Estilos de <Overview />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.ov__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 28px 36px;
+}
+
+@media (max-width: 900px) {
+  .ov__grid {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+}
+
+.ov__money, .ov__invoice {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.ov__invoice {
+  padding-left: 36px;
+  border-left: 1px solid var(--border);
+}
+
+@media (max-width: 900px) {
+  .ov__invoice {
+    padding-left: 0;
+    padding-top: 26px;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+
+.ov__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 420px) {
+  .ov__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ov__conf-top {
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ov__pct {
+  font-size: 0.8125rem;
+}
+
+.ov__bar {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--canvas-alt);
+  overflow: hidden;
+}
+
+.ov__bar span {
+  display: block;
+  height: 100%;
+  width: var(--w);
+  border-radius: inherit;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+}
+
+.ov__match {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.ov__match strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov__bar span {
+    transform: none;
+  }
+}

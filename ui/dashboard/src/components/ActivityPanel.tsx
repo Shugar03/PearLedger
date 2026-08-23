@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { COUNTED_EVENTS, type ActivityEntry } from '@ui/context/pear-context'
-import { usePear } from '@ui/hooks/usePear'
+import { COUNTED_EVENTS, type ActivityEntry } from '@dashboard/context/pear-context'
+import { usePear } from '@dashboard/hooks/usePear'
 
 const COUNTER_ICON = {
   'tool:executing': '▶',

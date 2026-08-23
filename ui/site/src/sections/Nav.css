@@ -1,0 +1,111 @@
+/*
+ * Estilos de <Nav />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgb(248 249 250 / 0.86);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 68px;
+}
+
+.nav__brand {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.nav__logo {
+  height: 42px;
+  width: auto;
+}
+
+.nav__logo-mark {
+  display: none;
+  height: 34px;
+  width: auto;
+}
+
+.nav__links {
+  display: flex;
+  gap: 22px;
+  margin-inline: auto;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+.nav__links a {
+  transition: color 0.16s ease;
+}
+
+.nav__links a:hover {
+  color: var(--text);
+}
+
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.nav__lang {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-pill);
+  padding: 3px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.nav__lang-current, .nav__lang-alt {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+}
+
+.nav__lang-current {
+  background: var(--ink);
+  color: var(--text-invert);
+}
+
+.nav__lang-alt {
+  color: var(--text-faint);
+}
+
+.nav__lang:hover .nav__lang-alt {
+  color: var(--text);
+}
+
+@media (max-width: 1000px) {
+  .nav__links {
+    display: none;
+  }
+  .nav__inner {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  .nav__logo {
+    display: none;
+  }
+  .nav__logo-mark {
+    display: block;
+  }
+}

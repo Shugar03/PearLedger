@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from 'react'
 
-import { ActivityPanel } from '@ui/components/ActivityPanel'
-import { Sidebar } from '@ui/components/Sidebar'
-import { TopBar } from '@ui/components/TopBar'
-import { titleOf, type ViewKey } from '@ui/lib/navigation'
-import { ForecastView } from '@ui/views/ForecastView'
-import { InboxView } from '@ui/views/InboxView'
-import { PaymentsView } from '@ui/views/PaymentsView'
-import { WalletView } from '@ui/views/WalletView'
+import { ActivityPanel } from '@dashboard/components/ActivityPanel'
+import { Sidebar } from '@dashboard/components/Sidebar'
+import { TopBar } from '@dashboard/components/TopBar'
+import { titleOf, type ViewKey } from '@dashboard/lib/navigation'
+import { ForecastView } from '@dashboard/views/ForecastView'
+import { InboxView } from '@dashboard/views/InboxView'
+import { PaymentsView } from '@dashboard/views/PaymentsView'
+import { WalletView } from '@dashboard/views/WalletView'
 
 /**
  * Sólo se monta la vista activa.

@@ -10,7 +10,7 @@
  * Replica la semántica de `EventSource`, reconexión con backoff acotado
  * incluida.
  */
-import type { StreamState } from '@ui/lib/types'
+import type { StreamState } from '@dashboard/lib/types'
 
 export interface EventStreamHandlers<T> {
   onMessage(message: T): void

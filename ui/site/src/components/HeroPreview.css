@@ -1,0 +1,231 @@
+/*
+ * Estilos de <HeroPreview />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.hp {
+  position: relative;
+}
+
+.hp__glow {
+  position: absolute;
+  inset: -45% -30%;
+  background:
+      radial-gradient(34% 40% at 32% 34%, rgb(196 245 60 / 0.24), rgb(196 245 60 / 0) 70%),
+      radial-gradient(36% 42% at 70% 70%, rgb(196 245 60 / 0.13), rgb(196 245 60 / 0) 72%);
+  pointer-events: none;
+}
+
+.hp__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 26px 28px;
+  background: rgb(255 255 255 / 0.085);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  color: var(--text-invert);
+  border: 1px solid rgb(255 255 255 / 0.17);
+  border-radius: var(--leaf-md);
+  box-shadow:
+      0 34px 70px -40px rgb(0 0 0 / 0.85),
+      inset 0 1px 0 rgb(255 255 255 / 0.16);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .hp__card {
+    background: rgb(24 24 27 / 0.82);
+  }
+}
+
+.hp__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hp__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--accent);
+  flex: none;
+}
+
+.hp__title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-invert);
+}
+
+.hp__sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-invert-muted);
+}
+
+.hp__status {
+  margin-left: auto;
+  border-color: rgb(255 255 255 / 0.14);
+  background: rgb(255 255 255 / 0.05);
+  color: var(--text-invert-muted);
+  font-size: 0.75rem;
+}
+
+.hp__status .dot {
+  background: var(--accent);
+}
+
+.hp__steps {
+  display: grid;
+  gap: 2px;
+}
+
+.hp__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 11px 10px;
+  margin-inline: -10px;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: var(--r-sm);
+}
+
+.hp__step::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  opacity: 0;
+  animation: sweep 6s linear infinite;
+  animation-delay: calc(var(--i) * 1.6s);
+}
+
+.hp__step > * {
+  position: relative;
+}
+
+.hp__step:first-child {
+  border-top: 0;
+}
+
+.hp__check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+  animation: pop 6s linear infinite;
+  animation-delay: calc(var(--i) * 1.6s);
+}
+
+.hp__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hp__detail {
+  font-size: 0.6875rem;
+  color: var(--text-invert-muted);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes sweep {
+  0%, 22% {
+    opacity: 0.14;
+  }
+  30%, 100% {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.72);
+  }
+  10%, 100% {
+    transform: scale(1);
+  }
+}
+
+.hp__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hp__bar {
+  flex: 1;
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: rgb(255 255 255 / 0.12);
+  overflow: hidden;
+}
+
+.hp__bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform: scaleX(1);
+  transform-origin: left;
+  animation: fill 6s linear infinite;
+}
+
+@keyframes fill {
+  0% {
+    transform: scaleX(0);
+  }
+  80%, 100% {
+    transform: scaleX(1);
+  }
+}
+
+.hp__note {
+  font-size: 0.6875rem;
+  color: var(--text-invert-muted);
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .hp__step {
+    grid-template-columns: 22px minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .hp__detail {
+    grid-column: 2;
+    text-align: left;
+  }
+  .hp__note {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp__step::before, .hp__check, .hp__bar i {
+    animation: none;
+  }
+  .hp__bar i {
+    transform: scaleX(1);
+  }
+}

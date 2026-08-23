@@ -2,12 +2,17 @@
   "name": "pearledger-ui",
   "version": "0.1.0",
   "private": true,
-  "description": "Capa humana de PearLedger — dashboard React (web + Electron)",
+  "description": "Capa humana de PearLedger — dashboard, pitch deck y landing (React) + shell Electron",
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
-    "build": "vite build",
-    "watch": "vite build --watch",
+    "build": "npm run build:dashboard && npm run build:deck && npm run build:site",
+    "build:dashboard": "vite build --config dashboard/vite.config.ts",
+    "build:deck": "vite build --config deck/vite.config.ts",
+    "build:site": "vite build --config site/vite.config.ts",
+    "watch:dashboard": "vite build --watch --config dashboard/vite.config.ts",
+    "watch:deck": "vite build --watch --config deck/vite.config.ts",
+    "watch:site": "vite build --watch --config site/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "electron .",
     "start": "electron .",
@@ -26,17 +31,22 @@
       "../dist/ipc/**/*",
       "../dist/**/*.js",
       "!../dist/**/*.test.js",
+      "!../dist/pitch/**/*",
       "!../dist/**/*.map"
     ],
     "extraResources": [
       {
         "from": "../out/win32-x64",
         "to": "bin",
-        "filter": ["pearledger.exe"]
+        "filter": [
+          "pearledger.exe"
+        ]
       }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "PearLedger-${version}-Setup.${ext}"
     }
   },

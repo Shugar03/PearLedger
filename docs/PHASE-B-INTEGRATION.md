@@ -65,8 +65,8 @@ npm run ui:watch       # bundle en watch, para el dashboard web
 ```
 
 **Arquitectura:**
-- `ui/src/` — app React: `views/` (Inbox, Pagos, Forecast, Wallet), `components/`,
-  `context/PearProvider.tsx`, `lib/pear-web.ts` (puente del navegador)
+- `ui/dashboard/src/` — app React: `views/` (Inbox, Pagos, Forecast, Wallet),
+  `components/`, `context/PearProvider.tsx`, `lib/pear-web.ts` (puente del navegador)
 - `ui/electron/main.mjs` — IPC → `dist/ipc/bridge.js`
 - `ui/electron/preload.mjs` — `window.pear.*` seguro
 - `src/dashboard/` — servidor HTTP + SSE; sirve el bundle desde `dist/dashboard/web/`

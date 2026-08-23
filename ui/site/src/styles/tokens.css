@@ -1,0 +1,64 @@
+/*
+ * Design system: paleta, tipografías, radios y sombras.
+ *
+ * Estética del manifiesto (docs/TEAM.md): FinTech premium, bento grid, alto
+ * contraste y el lima reservado a estados positivos y acciones.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+:root {
+  /* Superficies claras */
+  --canvas: #f8f9fa;
+  --canvas-alt: #f3f4f6;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --border-strong: #d7dade;
+  /* Superficies oscuras */
+  --ink: #111315;
+  --ink-soft: #18181b;
+  --ink-line: #2a2d31;
+  --ink-line-soft: #212428;
+  /* Texto */
+  --text: #111315;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --text-invert: #f7f8f8;
+  --text-invert-muted: #9ca3af;
+  /* Acento — sólo estados positivos, acciones y datos "gasless" */
+  --accent: #c4f53c;
+  --accent-bright: #ccff00;
+  --accent-soft: #eefac9;
+  --accent-deep: #5d7a08;
+  /* Tipografía */
+  --font-display: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Satoshi', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* Radios rectangulares (chips, botones, controles) */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-pill: 999px;
+  /* ---- Silueta de hoja de pera ----
+     Radios elípticos: curva larga en dos vértices opuestos y punta
+     suave en los otros dos. Los ejes X e Y difieren para que la
+     silueta sea asimétrica y orgánica, no un rectángulo redondeado. */
+  --leaf: 92px 14px 92px 14px / 74px 18px 74px 18px;
+  --leaf-mirror: 14px 92px 14px 92px / 18px 74px 18px 74px;
+  --leaf-md: 62px 12px 62px 12px / 52px 14px 52px 14px;
+  --leaf-md-mirror: 12px 62px 12px 62px / 14px 52px 14px 52px;
+  --leaf-sm: 34px 8px 34px 8px / 28px 10px 28px 10px;
+  --leaf-sm-mirror: 8px 34px 8px 34px / 10px 28px 10px 28px;
+  /* Layout */
+  --wrap: 1180px;
+  --gutter: 24px;
+  /* Sombras — muy suaves */
+  --shadow-xs: 0 1px 2px rgb(17 19 21 / 0.04);
+  --shadow-sm: 0 2px 8px -4px rgb(17 19 21 / 0.08);
+  --shadow-md: 0 12px 32px -18px rgb(17 19 21 / 0.16);
+  --shadow-lg: 0 32px 72px -40px rgb(17 19 21 / 0.3);
+  --shadow-glow: 0 0 0 1px rgb(196 245 60 / 0.35), 0 8px 28px -14px rgb(196 245 60 / 0.5);
+}

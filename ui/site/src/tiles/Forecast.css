@@ -1,0 +1,19 @@
+/*
+ * Estilos de <Forecast />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.fc__alert {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.fc__alert .dot {
+  background: var(--text-faint);
+}

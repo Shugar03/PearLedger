@@ -1,8 +1,10 @@
 /**
  * Compila el renderer del dashboard a `dist/dashboard/web/`.
  *
- * El renderer es una app React que vive en `ui/` y la compila Vite; este script
- * sólo es el puente desde `npm run build` de la raíz.
+ * El renderer es la app React de `ui/dashboard/` y la compila Vite; este script
+ * sólo es el puente desde `npm run build` de la raíz. El deck y la landing
+ * (`ui/deck`, `ui/site`) NO se compilan aquí: no forman parte del programa y
+ * tienen su propio comando, `npm run pitch:build`.
  *
  * Si `ui/` no tiene dependencias instaladas, no falla: avisa y sigue. El
  * harness, sus tests y el binario standalone no dependen del frontend, y
@@ -30,7 +32,7 @@ if (!existsSync(viteBin)) {
 
 // Se invoca el JS de Vite con el propio Node en vez del `.cmd` del bin: en
 // Windows el shim depende del shell y aquí no queremos ninguno de por medio.
-const result = spawnSync(process.execPath, [viteBin, 'build'], {
+const result = spawnSync(process.execPath, [viteBin, 'build', '--config', 'dashboard/vite.config.ts'], {
   cwd: uiDir,
   stdio: 'inherit'
 })

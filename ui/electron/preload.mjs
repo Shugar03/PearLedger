@@ -1,8 +1,8 @@
 /**
  * Fachada `window.pear` para Electron.
  *
- * Implementa el mismo contrato que `ui/src/lib/pear-web.ts` implementa para el
- * navegador (`PearBridge`, declarado en `ui/src/lib/types.ts`), de modo que un
+ * Implementa el mismo contrato que `ui/dashboard/src/lib/pear-web.ts` implementa
+ * para el navegador (`PearBridge`, en `ui/dashboard/src/lib/types.ts`), de modo que un
  * único bundle React sirva a los dos hosts.
  *
  * Se expone antes de que corra una línea de React: `lib/bridge.ts` mira si

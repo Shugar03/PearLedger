@@ -1,0 +1,54 @@
+/*
+ * Estilos de <Dashboard />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.db__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px 32px;
+  margin-bottom: clamp(32px, 4vw, 56px);
+}
+
+.db__head {
+  margin-bottom: 0;
+}
+
+.bento .col-12 {
+  grid-column: span 12;
+}
+
+.bento .col-8 {
+  grid-column: span 8;
+}
+
+.bento .col-4 {
+  grid-column: span 4;
+}
+
+.bento .col-4 {
+  grid-column: span 4;
+}
+
+@media (max-width: 980px) {
+  .bento {
+    grid-auto-flow: dense;
+  }
+  .bento .col-12, .bento .col-8 {
+    grid-column: span 6;
+  }
+  .bento .col-4 {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 760px) {
+  .bento .col-4 {
+    grid-column: span 6;
+  }
+}

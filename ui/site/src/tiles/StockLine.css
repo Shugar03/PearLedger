@@ -1,0 +1,62 @@
+/*
+ * Estilos de <StockLine />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.sl {
+  margin: 0;
+}
+
+.sl svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sl__area {
+  fill: url(#slFade);
+}
+
+.sl__line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sl__end {
+  fill: var(--ink);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.sl__threshold {
+  stroke: var(--text-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.sl__axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.sl__legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.sl__swatch {
+  width: 18px;
+  height: 0;
+  border-top: 1px dashed var(--text-faint);
+  flex: none;
+}

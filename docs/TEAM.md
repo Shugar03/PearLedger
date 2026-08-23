@@ -123,9 +123,9 @@
 | Archivo / carpeta | Responsabilidad |
 |-------------------|-----------------|
 | `ui/` o `electron/` *(a crear)* | App Electron + dashboard Bento |
-| `ui/src/screens/` | Pantallas (ver MVP abajo) |
-| `ui/src/components/` | Cards, sidebar, badges, modales |
-| `ui/src/ipc/` o `ui/src/api/` | Puente a harness — **sin lógica OCR/pagos** |
+| `ui/dashboard/src/views/` | Pantallas (ver MVP abajo) |
+| `ui/dashboard/src/components/` | Cards, sidebar, badges, modales |
+| `ui/dashboard/src/lib/` | Puente a harness — **sin lógica OCR/pagos** |
 
 **Reglas estrictas:**
 - **No duplicar lógica:** OCR, RAG, pagos y forecast viven en plugins (Antony). La UI solo invoca y visualiza.

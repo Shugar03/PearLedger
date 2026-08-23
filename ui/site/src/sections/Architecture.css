@@ -1,0 +1,112 @@
+/*
+ * Estilos de <Architecture />.
+ *
+ * Portado del export de diseño de `docs/pitch-deck/previewen.html`. Los
+ * selectores `[data-c="…"]` del original desaparecieron: eran marcadores del
+ * diseñador, y las clases ya vienen con prefijo propio.
+ */
+
+.section__head .ar__pear {
+  margin: 0 auto 34px;
+}
+
+.ar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ar__root {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 30px 16px 22px;
+  background: var(--ink);
+  color: var(--text-invert);
+  border-radius: var(--leaf-md);
+}
+
+.ar__mark {
+  height: 44px;
+  width: auto;
+}
+
+.ar__root-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ar__root-role {
+  font-size: 0.75rem;
+  color: var(--text-invert-muted);
+}
+
+.ar__wires {
+  width: 100%;
+  height: 72px;
+}
+
+.ar__wire {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.ar__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.ar .ar__card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ar__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--leaf-sm);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.ar__name {
+  font-size: 1.125rem;
+}
+
+.ar__body {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .ar__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ar__wires {
+    height: 44px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ar__grid {
+    grid-template-columns: 1fr;
+  }
+  .ar__wires {
+    display: none;
+  }
+  .ar__root {
+    margin-bottom: 22px;
+  }
+}

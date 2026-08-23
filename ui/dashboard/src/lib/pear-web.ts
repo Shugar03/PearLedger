@@ -11,7 +11,7 @@
  * topología del sistema de ficheros). La vista de Inbox detecta su ausencia y
  * cae a un campo de ruta.
  */
-import { openEventStream } from '@ui/lib/event-stream'
+import { openEventStream } from '@dashboard/lib/event-stream'
 import type {
   DashboardEvent,
   HealthPayload,
@@ -19,7 +19,7 @@ import type {
   StreamState,
   ToolDescriptor,
   ToolParams
-} from '@ui/lib/types'
+} from '@dashboard/lib/types'
 
 const TOKEN_HEADER = 'X-PearLedger-Token'
 

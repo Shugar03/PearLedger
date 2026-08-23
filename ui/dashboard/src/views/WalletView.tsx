@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react'
 
-import { Card } from '@ui/components/Card'
-import { JsonBlock } from '@ui/components/JsonBlock'
-import { usePear } from '@ui/hooks/usePear'
-import { useToolResult } from '@ui/hooks/useToolResult'
-import type { WalletBalance } from '@ui/lib/types'
+import { Card } from '@dashboard/components/Card'
+import { JsonBlock } from '@dashboard/components/JsonBlock'
+import { usePear } from '@dashboard/hooks/usePear'
+import { useToolResult } from '@dashboard/hooks/useToolResult'
+import type { WalletBalance } from '@dashboard/lib/types'
 
 export function WalletView(): ReactNode {
   const { runTool } = usePear()
