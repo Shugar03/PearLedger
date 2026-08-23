@@ -152,10 +152,10 @@ describe('MCP TDD (protocolo)', () => {
     }
     assert.ok(found, 'expected demo stock.json under appRoot/workspace/assets')
 
-    const prev = process.cwd()
+    const prev = process.cwd() // conventions:allow — el test prueba independencia del cwd
     try {
       process.chdir(os.tmpdir())
-      assert.notEqual(process.cwd(), root)
+      assert.notEqual(process.cwd(), root) // conventions:allow — aserción del test cwd
       const result = await client.callTool({
         name: 'check_inventory',
         arguments: {}
