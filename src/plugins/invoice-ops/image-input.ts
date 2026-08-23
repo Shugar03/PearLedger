@@ -34,8 +34,15 @@ const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
   '.gif'
 ])
 
-/** Intérpretes a probar, en orden. `python3` primero: es lo que hay en Linux. */
-const PYTHON_CANDIDATES = ['python3', 'python'] as const
+/**
+ * Intérpretes a probar, en orden.
+ *
+ * `python3` primero: es lo que hay en Linux y en macOS. `py` al final por
+ * Windows, donde es el lanzador oficial y a veces lo único que resuelve a un
+ * intérprete real — el `python3` del PATH suele ser el alias de la Store, que
+ * no ejecuta nada y sólo abre la tienda.
+ */
+const PYTHON_CANDIDATES = ['python3', 'python', 'py'] as const
 
 const RESIZE_SCRIPT = `
 from PIL import Image
@@ -189,11 +196,31 @@ export interface ResolveImageOptions {
 }
 
 /**
- * Rasteriza la primera página de un PDF a PNG (pdftoppm o Python/Pillow).
- * Devuelve la ruta del PNG generado.
+ * Rasteriza la primera página de un PDF a PNG: `pdftoppm` o PyMuPDF.
+ *
+ * Devuelve `true` si generó el PNG. Si no pudo, deja en `attempts` qué se
+ * probó y con qué resultado — sin eso, el error final decía qué instalar
+ * pero no cuál de las dos vías había fallado ni por qué.
  */
-async function rasterPdfFirstPage(pdfPath: string, pngPath: string): Promise<boolean> {
+async function rasterPdfFirstPage(
+  pdfPath: string,
+  pngPath: string,
+  attempts: Map<string, string> = new Map()
+): Promise<boolean> {
   const outPrefix = pngPath.replace(/\.png$/i, '')
+
+  /** Primer motivo por herramienta, recortado: el mensaje se lee en la UI. */
+  const note = (tool: string, why: string): void => {
+    if (attempts.has(tool)) return
+    const clean = why.split(/\r?\n/)[0]?.trim() ?? ''
+    // El alias de la Microsoft Store contesta con un párrafo entero.
+    const short = /Microsoft Store|Windows Apps/i.test(clean)
+      ? 'alias de la Microsoft Store, no es un intérprete'
+      : clean.length > 70
+        ? `${clean.slice(0, 70)}…`
+        : clean || 'falló sin decir por qué'
+    attempts.set(tool, short)
+  }
   const pdftoppm = await new Promise<boolean>((resolve) => {
     let child: ReturnType<typeof spawn>
     try {
@@ -211,47 +238,69 @@ async function rasterPdfFirstPage(pdfPath: string, pngPath: string): Promise<boo
     child.stderr?.on('data', (chunk: unknown) => {
       stderr += String(chunk)
     })
-    child.on('error', () => resolve(false))
+    child.on('error', () => {
+      note('pdftoppm', 'no está instalado')
+      resolve(false)
+    })
     child.on('close', (code) => {
       if (code === 0) {
         resolve(true)
         return
       }
-      log.debug(`pdftoppm falló (${code}): ${stderr.trim()}`)
+      const detail = stderr.trim() || `salió con ${code}`
+      note('pdftoppm', detail)
+      log.debug(`pdftoppm falló (${code}): ${detail}`)
       resolve(false)
     })
   })
   if (pdftoppm && (await exists(pngPath))) return true
 
+  // PyMuPDF se importa como `pymupdf` desde la 1.24; `fitz` es el nombre viejo
+  // y sigue existiendo, pero una instalación nueva puede no traerlo.
   const PDF_RASTER_SCRIPT = `
 import sys
 try:
-    import fitz
+    import pymupdf as fitz
 except ImportError:
-    sys.exit(2)
+    try:
+        import fitz
+    except ImportError:
+        sys.exit(2)
 doc = fitz.open(sys.argv[1])
 pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2))
 pix.save(sys.argv[2])
 `
 
   for (const interpreter of PYTHON_CANDIDATES) {
-    const ok = await new Promise<boolean>((resolve) => {
+    const outcome = await new Promise<{ ok: boolean; why: string }>((resolve) => {
       let child: ReturnType<typeof spawn>
       try {
         child = spawn(interpreter, ['-c', PDF_RASTER_SCRIPT, pdfPath, pngPath], {
           stdio: ['ignore', 'ignore', 'pipe']
         })
       } catch {
-        resolve(false)
+        resolve({ ok: false, why: 'no se pudo lanzar' })
         return
       }
-      child.on('error', () => resolve(false))
-      child.on('close', (code) => resolve(code === 0))
+
+      let stderr = ''
+      child.stderr?.on('data', (chunk: unknown) => {
+        stderr += String(chunk)
+      })
+      child.on('error', () => resolve({ ok: false, why: 'no está instalado' }))
+      child.on('close', (code) => {
+        // El 2 lo devuelve el propio script cuando no encuentra PyMuPDF.
+        if (code === 0) resolve({ ok: true, why: '' })
+        else if (code === 2) resolve({ ok: false, why: 'sin PyMuPDF' })
+        else resolve({ ok: false, why: stderr.trim().split('\n').pop() ?? `salió con ${code}` })
+      })
     })
-    if (ok && (await exists(pngPath))) {
+
+    if (outcome.ok && (await exists(pngPath))) {
       log.info(`PDF rasterizado con ${interpreter}: ${pngPath}`)
       return true
     }
+    note(interpreter, outcome.why)
   }
 
   return false
@@ -273,14 +322,22 @@ export async function ensurePdfRasterized(filePath: string): Promise<string> {
     throw new Error(`Formato no soportado para OCR: ${ext || '(sin extensión)'}`)
   }
 
-  const pdf = (await locate(filePath)) ?? filePath
+  // Antes se iba directo a rasterizar: un PDF inexistente terminaba culpando al
+  // rasterizador en vez de decir que el archivo no está.
+  const pdf = await locate(filePath)
+  if (!pdf) throw new Error(`No se encontró el PDF: ${filePath}`)
+
   const pngPath = pdf.replace(/\.pdf$/i, '.png')
   if (await exists(pngPath)) return pngPath
 
-  if (await rasterPdfFirstPage(pdf, pngPath)) return pngPath
+  const attempts = new Map<string, string>()
+  if (await rasterPdfFirstPage(pdf, pngPath, attempts)) return pngPath
 
+  const tried = [...attempts].map(([tool, why]) => `${tool}: ${why}`).join(' · ')
   throw new Error(
-    `PDF requiere raster previo: generar ${pngPath} (pdftoppm -png "${pdf}" out) o instalar PyMuPDF`
+    `No se pudo rasterizar el PDF (${tried}). ` +
+      `Instalá PyMuPDF con "pip install pymupdf", o generá el PNG a mano: ` +
+      `pdftoppm -png -singlefile "${pdf}" "${pngPath.replace(/\.png$/i, '')}"`
   )
 }
 

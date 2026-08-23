@@ -138,6 +138,23 @@ Las reglas de código son obligatorias y se verifican en CI: ver
 | Disco | 5 GB | 10 GB SSD |
 | Node | ≥22.17 | 22.18 LTS |
 
+### Facturas en PDF
+
+El OCR trabaja sobre imágenes. Si la factura es un PDF, el harness rasteriza su
+primera página con lo que encuentre, en este orden:
+
+```bash
+pip install pymupdf     # lo que usa por defecto
+# o, si preferís poppler:
+#   Linux   sudo apt install poppler-utils
+#   macOS   brew install poppler
+#   Windows scoop install poppler
+```
+
+Sin ninguna de las dos, el error dice qué intentó y con qué resultado
+(`pdftoppm: no está instalado · python: sin PyMuPDF`) en vez de dejarte
+adivinar. Las imágenes — PNG, JPG, WEBP — no necesitan nada de esto.
+
 ### Gotchas críticos (del manifesto)
 
 - **`ctx_size` ≥ 4096** en `qvac.config.json` — default 1024 trunca facturas
