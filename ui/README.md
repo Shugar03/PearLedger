@@ -158,9 +158,15 @@ resto del programa Bare/Node.
 
 Diferencias reales, resueltas por presencia y no por `if (electron)`:
 
-- `pickInvoice()` sólo existe en Electron (diálogo nativo con ruta absoluta). En
-  el navegador la vista de Inbox cae a un campo de ruta: un `<input type="file">`
-  no expone rutas del disco.
+- `pickInvoice()` sólo existe en Electron: abre el diálogo nativo y devuelve la
+  ruta absoluta en disco.
+- `uploadInvoice(file)` sólo existe en la web. El navegador no dice dónde vive
+  el archivo que elegiste — sólo su nombre y sus bytes —, así que se copian al
+  workspace por `POST /api/invoices` y se procesa la ruta que devuelve el
+  servidor. Antes se adivinaba `workspace/invoices/<nombre>` y fallaba salvo
+  que el archivo ya estuviera justo ahí. El nombre pasa por `safeInvoiceName`
+  (`src/dashboard/security.ts`): último segmento, sin caracteres de control,
+  sin nombres reservados de Windows y sólo con extensiones que el OCR lee.
 - `onStreamState()` / `health()` sólo existen en la web: en Electron no hay
   stream HTTP que vigilar.
 

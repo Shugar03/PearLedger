@@ -69,6 +69,15 @@ export interface PearBridge {
 
   /** Sólo Electron: diálogo nativo que devuelve la ruta absoluta en disco. */
   pickInvoice?(): Promise<string | null>
+  /**
+   * Sólo web: copia el archivo al workspace y devuelve su ruta en disco.
+   *
+   * El navegador no revela dónde vive lo que elegís — sólo su nombre y sus
+   * bytes —, así que la única forma de que el harness lo lea es dejarlo del
+   * lado del servidor. En Electron no hace falta: el diálogo nativo ya da la
+   * ruta real.
+   */
+  uploadInvoice?(file: File): Promise<string>
   /** Sólo web: `/api/health`. */
   health?(): Promise<HealthPayload>
   /** Sólo web: estado del stream SSE. */

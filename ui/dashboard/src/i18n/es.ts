@@ -137,8 +137,9 @@ export const es = {
     pickBrowser: 'Elegir archivo',
     process: 'Procesar factura',
     demo: 'Usar la factura de ejemplo',
-    note1: 'El navegador no revela la ruta en disco, sólo el nombre: al elegir un archivo se propone',
-    note2: 'y podés corregirla. El diálogo nativo de Electron sí devuelve la ruta completa.',
+    uploading: 'Copiando…',
+    note1: 'El navegador no revela dónde vive el archivo, así que al elegirlo se copia a',
+    note2: 'y se procesa desde ahí. En Electron no hace falta: el diálogo nativo da la ruta real.',
     needPath: 'Indicá la ruta del archivo de la factura',
     resultTitle: 'Resultado',
     resultEmpty:

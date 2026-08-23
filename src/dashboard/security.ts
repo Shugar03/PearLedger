@@ -48,6 +48,14 @@ export const TOKEN_PLACEHOLDER = '__PEARLEDGER_SESSION_TOKEN__'
 export const MAX_BODY_BYTES = 256 * 1024
 
 /**
+ * Techo de una factura subida.
+ *
+ * Un escaneo grande ronda los pocos MB; 20 deja margen de sobra y mantiene
+ * acotado lo que un cliente puede hacer escribir en disco de una sola vez.
+ */
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+/**
  * Content-Types que un contexto cross-origin puede enviar sin preflight.
  * Rechazarlos explícitamente es lo que convierte el preflight en obligatorio.
  */
@@ -117,6 +125,70 @@ export function isJsonContentType(value: string | undefined): boolean {
   return mime === 'application/json'
 }
 
+/**
+ * Tipo de una subida.
+ *
+ * `application/octet-stream` no está en la lista de tipos "simples" de CORS, así
+ * que fuerza el preflight igual que el JSON: un origen ajeno no puede mandarlo
+ * sin que el navegador pregunte antes, y aquí no se contesta ningún preflight.
+ */
+export function isUploadContentType(value: string | undefined): boolean {
+  if (typeof value !== 'string' || value === '') return false
+  const mime = (value.split(';')[0] ?? '').trim().toLowerCase()
+  return mime === 'application/octet-stream'
+}
+
+/** Extensiones que el OCR sabe leer. Lo demás no entra al workspace. */
+const UPLOAD_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.pdf',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp'
+])
+
+/** Un nombre de archivo no puede pasar de esto, contando la extensión. */
+const MAX_NAME_LENGTH = 120
+
+/**
+ * Convierte el nombre que manda el navegador en uno seguro para el workspace.
+ *
+ * Devuelve `null` si no hay forma de hacerlo seguro. Lo que se defiende:
+ *
+ *  · Rutas: sólo se conserva el último segmento, así que `../../.ssh/id_rsa` se
+ *    queda en `id_rsa` — y sin extensión válida, se rechaza.
+ *  · Nombres reservados de Windows (`CON`, `PRN`, `COM1`…), que abren un
+ *    dispositivo en vez de crear un archivo.
+ *  · Caracteres de control y los que Windows prohíbe en un nombre.
+ *  · Extensión: sólo lo que el OCR sabe leer, para que esto no se convierta en
+ *    un sitio donde dejar cualquier cosa.
+ */
+export function safeInvoiceName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+
+  // `basename` de las dos familias: el navegador puede mandar cualquiera.
+  const last = raw.split(/[/\\]/).pop() ?? ''
+  const trimmed = last.trim()
+  if (trimmed === '' || trimmed === '.' || trimmed === '..') return null
+
+  const extension = path.extname(trimmed).toLowerCase()
+  if (!UPLOAD_EXTENSIONS.has(extension)) return null
+
+  const stem = trimmed
+    .slice(0, trimmed.length - extension.length)
+    // eslint-disable-next-line no-control-regex -- el rango es justo lo que se filtra
+    .replace(/[\u0000-\u001f<>:"|?*]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^\.+/, '')
+  if (stem === '') return null
+
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(stem)) return null
+
+  const name = `${stem.slice(0, MAX_NAME_LENGTH - extension.length)}${extension}`
+  return name === extension ? null : name
+}
+
 export interface RequestVerdict {
   ok: boolean
   status: number
@@ -132,8 +204,10 @@ function deny(status: number, code: string, message: string): RequestVerdict {
 
 export interface GuardOptions {
   port: number
-  /** Mutadora: exige `Origin` presente y `Content-Type: application/json`. */
+  /** Mutadora: exige `Origin` presente y un `Content-Type` que fuerce preflight. */
   mutating: boolean
+  /** La ruta recibe bytes, no JSON: se admite `application/octet-stream`. */
+  binaryBody?: boolean
   /** Endpoints de datos (`/api/*`). Los estáticos se sirven sin token. */
   requiresToken: boolean
 }
@@ -175,8 +249,18 @@ export function guardRequest(req: IncomingMessage, options: GuardOptions): Reque
       return deny(403, 'missing_origin', 'Falta la cabecera Origin en una petición mutadora')
     }
     // 5. Fuerza el preflight CORS, que sin cabeceras CORS el navegador aborta.
-    if (!isJsonContentType(header(req, 'content-type'))) {
-      return deny(415, 'bad_content_type', 'Se exige Content-Type: application/json')
+    const contentType = header(req, 'content-type')
+    const acceptable = options.binaryBody
+      ? isUploadContentType(contentType) || isJsonContentType(contentType)
+      : isJsonContentType(contentType)
+    if (!acceptable) {
+      return deny(
+        415,
+        'bad_content_type',
+        options.binaryBody
+          ? 'Se exige Content-Type: application/octet-stream'
+          : 'Se exige Content-Type: application/json'
+      )
     }
   }
 

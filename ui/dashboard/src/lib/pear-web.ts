@@ -125,6 +125,29 @@ export function createWebBridge(): PearBridge {
       return payload.result
     },
 
+    /**
+     * Sube la factura al workspace y devuelve la ruta con la que el harness
+     * puede leerla. El nombre viaja en la query y los bytes en el cuerpo:
+     * `application/octet-stream` no es un tipo "simple" de CORS, así que
+     * fuerza el preflight igual que el JSON del resto de la API.
+     */
+    async uploadInvoice(file: File): Promise<string> {
+      const response = await fetch(`/api/invoices?name=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/octet-stream' }),
+        credentials: 'omit',
+        cache: 'no-store',
+        body: file
+      })
+      if (!response.ok) throw await readError(response)
+
+      const payload = (await response.json()) as { path?: string }
+      if (typeof payload.path !== 'string' || payload.path === '') {
+        throw new Error('El servidor no devolvió la ruta del archivo')
+      }
+      return payload.path
+    },
+
     onEvent(handler): () => void {
       eventHandlers.add(handler)
       ensureStream()

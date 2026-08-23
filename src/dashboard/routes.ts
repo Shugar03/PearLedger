@@ -15,10 +15,13 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { executeTool, listTools } from '@ipc/bridge.js'
 import { getLogger } from '@shared/logger.js'
 import { META } from '@shared/meta.js'
+import { workspaceDir } from '@shared/paths.js'
 
 import type { EventHub } from './events.js'
 import {
   MAX_BODY_BYTES,
+  MAX_UPLOAD_BYTES,
+  safeInvoiceName,
   TOKEN_PLACEHOLDER,
   contentTypeFor,
   gateToolCall,
@@ -253,6 +256,77 @@ async function serveIngest(req: IncomingMessage, res: ServerResponse): Promise<v
   }
 }
 
+/** Lee el cuerpo entero en memoria, con techo. Devuelve `null` si se pasa. */
+async function readBinaryBody(req: IncomingMessage): Promise<Buffer | null> {
+  const chunks: Buffer[] = []
+  let size = 0
+
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), 'utf8')
+    size += buf.byteLength
+    if (size > MAX_UPLOAD_BYTES) {
+      req.destroy()
+      return null
+    }
+    chunks.push(buf)
+  }
+
+  return Buffer.concat(chunks)
+}
+
+/**
+ * Deja una factura en el workspace y devuelve su ruta en disco.
+ *
+ * Existe porque el navegador no revela dónde vive el archivo que elegiste: sólo
+ * da su nombre y sus bytes. Antes el dashboard adivinaba
+ * `workspace/invoices/<nombre>` y fallaba si no estaba ahí; ahora se copia y la
+ * ruta que devuelve es la de verdad.
+ *
+ * El nombre se sanea en `safeInvoiceName` y el destino se arma con
+ * `workspaceDir`, así que nada de lo que mande el cliente elige el directorio.
+ */
+async function serveInvoiceUpload(
+  req: IncomingMessage,
+  res: ServerResponse,
+  requested: string | null
+): Promise<void> {
+  const name = safeInvoiceName(requested)
+  if (name === null) {
+    sendJson(res, 400, {
+      error: 'bad_request',
+      message: 'Nombre de archivo no válido: se aceptan PDF, PNG, JPG y WEBP'
+    })
+    return
+  }
+
+  const body = await readBinaryBody(req)
+  if (body === null) {
+    sendJson(res, 413, {
+      error: 'too_large',
+      message: `El archivo supera el límite de ${Math.round(MAX_UPLOAD_BYTES / (1024 * 1024))} MB`
+    })
+    return
+  }
+  if (body.byteLength === 0) {
+    sendJson(res, 400, { error: 'bad_request', message: 'El archivo llegó vacío' })
+    return
+  }
+
+  const target = workspaceDir('invoices', name)
+  try {
+    await fs.promises.mkdir(path.dirname(target), { recursive: true })
+    await fs.promises.writeFile(target, body)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.warn(`no se pudo guardar ${name}: ${message}`)
+    sendJson(res, 500, { error: 'write_failed', message })
+    return
+  }
+
+  log.info(`factura guardada en el workspace: ${target} (${body.byteLength} bytes)`)
+  sendJson(res, 201, { path: target, name, bytes: body.byteLength })
+}
+
 async function serveExecute(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const body = await readJsonBody(req)
   if (!body.ok) {
@@ -291,7 +365,8 @@ export async function handleRequest(
   ctx: RouteContext
 ): Promise<void> {
   const method = (req.method ?? 'GET').toUpperCase()
-  const pathname = new URL(req.url ?? '/', `http://${LOOPBACK_HOST}:${ctx.port}`).pathname
+  const url = new URL(req.url ?? '/', `http://${LOOPBACK_HOST}:${ctx.port}`)
+  const pathname = url.pathname
   const isApi = pathname === '/api' || pathname.startsWith('/api/')
   const head = method === 'HEAD'
 
@@ -311,7 +386,8 @@ export async function handleRequest(
   const verdict = guardRequest(req, {
     port: ctx.port,
     mutating: method === 'POST',
-    requiresToken: isApi
+    requiresToken: isApi,
+    binaryBody: pathname === '/api/invoices'
   })
 
   if (!verdict.ok) {
@@ -329,6 +405,10 @@ export async function handleRequest(
       }
       if (pathname === '/api/ingest') {
         await serveIngest(req, res)
+        return
+      }
+      if (pathname === '/api/invoices') {
+        await serveInvoiceUpload(req, res, url.searchParams.get('name'))
         return
       }
       sendJson(res, 404, { error: 'not_found', message: `Sin ruta POST para ${pathname}` })

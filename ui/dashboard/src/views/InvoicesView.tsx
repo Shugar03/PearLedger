@@ -47,6 +47,8 @@ export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNod
   const [filePath, setFilePath] = useState(quick?.path ?? '')
   const [stage, setStage] = useState<Stage>('idle')
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const canPickNatively = typeof bridge.pickInvoice === 'function'
 
@@ -55,10 +57,28 @@ export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNod
     if (chosen) setFilePath(chosen)
   }
 
+  /**
+   * El navegador no dice dónde vive el archivo, así que se copia al workspace y
+   * se usa la ruta que devuelve el servidor. Antes se adivinaba
+   * `workspace/invoices/<nombre>` y fallaba salvo que el archivo ya estuviera
+   * justo ahí.
+   */
   function pickFromBrowser(event: ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0]
-    // El navegador no revela la ruta absoluta: proponemos la del workspace.
-    if (file) setFilePath(`workspace/invoices/${file.name}`)
+    if (!file || typeof bridge.uploadInvoice !== 'function') return
+
+    setUploading(true)
+    setUploadError(null)
+    bridge.uploadInvoice(file).then(
+      (stored) => {
+        setFilePath(stored)
+        setUploading(false)
+      },
+      (err: unknown) => {
+        setUploadError(err instanceof Error ? err.message : String(err))
+        setUploading(false)
+      }
+    )
   }
 
   function ingest(override?: string): void {
@@ -139,9 +159,9 @@ export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNod
               /* El input nativo se esconde detrás de la etiqueta: su botón lo
                  dibuja el navegador, con su propio idioma y su propio estilo. */
               <FieldSlot label={t.invoices.pickBrowser}>
-                <label className="btn">
+                <label className={uploading ? 'btn is-busy' : 'btn'}>
                   <Icon name="folder" size={16} />
-                  {t.invoices.pickButton}
+                  {uploading ? t.invoices.uploading : t.invoices.pickButton}
                   <input
                     className="sr-only"
                     type="file"
@@ -158,7 +178,7 @@ export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNod
               type="button"
               className="btn btn--primary"
               onClick={() => ingest()}
-              disabled={pending}
+              disabled={pending || uploading}
             >
               {t.invoices.process}
             </button>
@@ -166,6 +186,10 @@ export function InvoicesView({ quick }: { quick: QuickIngest | null }): ReactNod
               {t.invoices.demo}
             </button>
           </div>
+
+          {uploadError ? (
+            <Notice problem={{ tone: 'error', message: uploadError }} />
+          ) : null}
 
           <p className="note">
             {t.invoices.note1} <code>workspace/invoices/</code> {t.invoices.note2}
