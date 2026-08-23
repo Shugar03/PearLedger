@@ -14,7 +14,6 @@ export const en: Dict = {
   },
 
   sidebar: {
-    guarantee: 'Everything runs here. Nothing is uploaded.',
     tools: 'Tools',
     version: 'Version',
     models: 'Models',
@@ -29,11 +28,15 @@ export const en: Dict = {
     placeholder: 'Path to an invoice to process…',
     pathLabel: 'Invoice path',
     submit: 'Process',
-    local: 'Local',
     alerts: 'View alerts',
     theme: 'Switch to dark theme',
     themeLight: 'Switch to light theme',
-    language: 'Cambiar a español'
+    language: 'Language'
+  },
+
+  languages: {
+    es: 'Español',
+    en: 'English'
   },
 
   stream: {

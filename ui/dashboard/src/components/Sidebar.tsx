@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { logoPearledger, logoPearledgerInvert } from '@dashboard/assets'
 import { Icon } from '@dashboard/components/Icon'
 import { usePear } from '@dashboard/hooks/usePear'
 import { usePrefs } from '@dashboard/hooks/usePrefs'
@@ -41,19 +42,21 @@ export function Sidebar({
 
   return (
     <aside className="sidebar">
+      {/* Las dos versiones se montan y la CSS esconde la que no toca: así el
+          cambio de tema no depende de que React sepa cuál está pintando. */}
       <div className="brand">
-        <span aria-hidden="true">🍐</span> PearLedger
+        <img className="brand__logo brand__logo--light" src={logoPearledger} alt="PearLedger" />
+        <img
+          className="brand__logo brand__logo--dark"
+          src={logoPearledgerInvert}
+          alt="PearLedger"
+        />
       </div>
 
       {group('main')}
       {group('aside')}
 
       <div className="sidebar__foot">
-        <p className="guarantee">
-          <Icon name="shield" size={15} />
-          {t.sidebar.guarantee}
-        </p>
-
         <div className="meta">
           <div className="meta__row">
             <span>{t.sidebar.tools}</span>

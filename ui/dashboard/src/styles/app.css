@@ -93,11 +93,38 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  padding: 2px 8px 0;
+}
+
+.brand__logo {
+  display: block;
+  width: 100%;
+  max-width: 148px;
+  height: auto;
+}
+
+/* Se montan las dos y la CSS elige, con el mismo criterio que los tokens:
+   claro por defecto, oscuro si lo pide el sistema o el usuario. */
+.brand__logo--dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand__logo--light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .brand__logo--dark {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .brand__logo--light {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand__logo--dark {
+  display: block;
 }
 
 .nav {
@@ -149,20 +176,6 @@ body {
   margin-top: auto;
   display: grid;
   gap: 10px;
-}
-
-.guarantee {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 11px;
-  border-radius: var(--r-nav);
-  background: var(--lime);
-  color: var(--lime-ink);
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.35;
 }
 
 .meta {
@@ -250,20 +263,6 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.identity__who {
-  color: var(--text-muted);
-}
-
-.identity__avatar {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--lime);
-  font-size: 1rem;
 }
 
 .bell {
@@ -1190,6 +1189,320 @@ body {
 
   .view--home {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* ── Selector de idioma ──────────────────────────────────────────────────── */
+
+.lang {
+  position: relative;
+}
+
+.lang__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.lang__trigger:hover {
+  background: var(--surface-soft);
+}
+
+.lang__code {
+  white-space: nowrap;
+}
+
+.lang__caret {
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.lang__caret.is-open {
+  transform: rotate(180deg);
+}
+
+.lang__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  min-width: 172px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  transform-origin: top right;
+  animation: menu-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.lang__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 130ms ease;
+}
+
+.lang__option:hover {
+  background: var(--surface-soft);
+}
+
+.lang__option.is-active {
+  font-weight: 650;
+}
+
+.lang__option svg:last-child {
+  margin-left: auto;
+  color: var(--lime-text);
+}
+
+.flag {
+  flex: none;
+  border-radius: 3px;
+}
+
+.flag__edge {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.14);
+}
+
+/* ── Movimiento ──────────────────────────────────────────────────────────── */
+
+/* El cambio de tema se atenúa: sin esto, pasar de claro a oscuro es un flash. */
+body,
+.frame__inner,
+.sidebar,
+.topbar,
+.card,
+.quick,
+.field input,
+.note,
+.placeholder,
+.row,
+.tool,
+.step,
+.summary,
+.raw {
+  transition: background-color 260ms ease, color 260ms ease, border-color 260ms ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes value-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Las tarjetas de una vista entran escalonadas: primero la de arriba. */
+.view > * {
+  animation: rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.view > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.view > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.view > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.rail > * {
+  animation: rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.rail > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.nav__item {
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nav__item:hover:not(.is-active) {
+  transform: translateX(2px);
+}
+
+.nav__item.is-active {
+  animation: pop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn--primary:hover:not(:disabled) {
+  box-shadow: 0 8px 20px -12px rgb(0 0 0 / 0.7);
+}
+
+.icon-btn svg {
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.icon-btn:hover svg {
+  transform: translate(1.5px, -1.5px);
+}
+
+.chip {
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+.pill--flip {
+  animation: value-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bell__swap {
+  display: grid;
+  place-items: center;
+  animation: swap-in 320ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.bell__count {
+  animation: pop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+.kpi__value {
+  animation: value-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.list__item {
+  animation: rise 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.badge {
+  animation: pop 240ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+.table tbody tr {
+  animation: value-in 280ms ease both;
+}
+
+.step {
+  animation: rise 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.step:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.summary {
+  animation: rise 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.row:hover,
+.tool:hover {
+  background: var(--surface-mute);
+}
+
+/* `width` es propiedad geométrica de SVG y también propiedad CSS: la barra
+   crece sola cuando cambia el dato. */
+.bar__fill {
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.modal {
+  animation: modal-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.modal::backdrop {
+  animation: backdrop-in 220ms ease both;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

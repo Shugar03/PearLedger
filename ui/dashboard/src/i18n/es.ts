@@ -21,7 +21,6 @@ export const es = {
   },
 
   sidebar: {
-    guarantee: 'Todo corre acá. Nada se sube.',
     tools: 'Tools',
     version: 'Versión',
     models: 'Modelos',
@@ -36,11 +35,15 @@ export const es = {
     placeholder: 'Ruta de una factura para procesar…',
     pathLabel: 'Ruta de la factura',
     submit: 'Procesar',
-    local: 'Local',
     alerts: 'Ver alertas',
     theme: 'Cambiar a tema oscuro',
     themeLight: 'Cambiar a tema claro',
-    language: 'Switch to English'
+    language: 'Idioma'
+  },
+
+  languages: {
+    es: 'Español',
+    en: 'English'
   },
 
   stream: {

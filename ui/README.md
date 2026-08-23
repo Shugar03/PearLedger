@@ -52,6 +52,29 @@ procesarla — y la campana cuenta las tools bloqueadas o fallidas. El riel
 derecho es el mismo stream de eventos del harness en dos formas: un círculo por
 ejecución y una tabla con las últimas.
 
+El estado del stream sólo aparece cuando hay algo que decir: "en vivo" era ruido
+permanente, "reconectando" y "sin stream" sí piden atención.
+
+El logo va en `src/assets/`, en dos versiones — tinta y blanca — y las dos se
+montan siempre: la CSS esconde la que no corresponde, con el mismo criterio que
+los tokens. Así el cambio de tema no depende de que React sepa cuál está
+pintando el sistema.
+
+### Movimiento
+
+Todo lo que aparece, cambia o se abre tiene su animación, y todas viven juntas
+al final de `app.css`:
+
+- Las tarjetas de una vista entran escalonadas; las filas, los círculos de
+  actividad y las filas de la tabla, al montarse.
+- Las cifras de los KPI se remontan con una `key` cuando cambia el dato, y con
+  eso repiten su entrada: el número nuevo llega, no aparece de golpe.
+- La barra de progreso anima su ancho por CSS — `width` es propiedad geométrica
+  de SVG y también propiedad CSS.
+- El cambio de tema atenúa colores y bordes en vez de saltar.
+- Todo se apaga entero bajo `prefers-reduced-motion`, con un bloque `!important`
+  que va el último del archivo.
+
 Una consecuencia práctica de su CSP (`style-src 'self'`, sin `unsafe-inline`):
 **ningún componente del dashboard puede usar `style={{…}}`**, porque el
 navegador descarta el atributo. Lo que depende de un dato, como el ancho de un

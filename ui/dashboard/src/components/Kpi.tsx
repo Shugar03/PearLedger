@@ -46,7 +46,11 @@ export function Kpi({
       </div>
 
       <div className="kpi__row">
-        <p className={value === '—' ? 'kpi__value is-empty' : 'kpi__value'}>{value}</p>
+        {/* La `key` remonta el nodo al cambiar el dato, y con eso se repite
+            la animación de entrada: la cifra nueva llega, no aparece. */}
+        <p key={value} className={value === '—' ? 'kpi__value is-empty' : 'kpi__value'}>
+          {value}
+        </p>
         {badge ? <span className={badgeClass}>{badge}</span> : null}
       </div>
 
