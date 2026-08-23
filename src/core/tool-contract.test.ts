@@ -10,12 +10,9 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHarness } from '@core/harness.js'
 import { loadPlugins } from '@core/loader.js'
+import { FROZEN_TOOLS } from '@core/frozen-tools.js'
 
-export const FROZEN_TOOLS: Record<string, string[]> = {
-  'plugin-invoice-ops': ['parse_invoice', 'match_purchase_order'],
-  'plugin-procurement-forecast': ['check_inventory', 'run_usage_forecast', 'draft_purchase_order'],
-  'plugin-wdk-settlement': ['get_wallet_balance', 'quote_payment', 'execute_gasless_payment']
-}
+export { FROZEN_TOOLS }
 
 const EXPECTED = Object.values(FROZEN_TOOLS).flat()
 
