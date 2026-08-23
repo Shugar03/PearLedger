@@ -120,6 +120,10 @@
     "pear:build": "pear build --target ../pearledger-deployment",
     "models:download": "npm run build && node dist/scripts/download-models.js",
     "fixtures:seed": "npm run build && node dist/scripts/seed-fixtures.js",
+    "mcp": "npm run build && node --use-system-ca --env-file=.env dist/workers/pearledger-mcp.js",
+    "mcp:status": "npm run build && node --use-system-ca --env-file=.env dist/workers/pearledger-mcp.js --status",
+    "mcp:setup": "node --use-system-ca dist/workers/pearledger-mcp.js --setup",
+    "test:mcp": "npm run build && node --test --test-concurrency=1 \"dist/workers/mcp*.test.js\"",
     "wdk:mcp": "node --use-system-ca --env-file=.env dist/workers/wdk-worker.js",
     "wdk:mcp:status": "node --use-system-ca --env-file=.env dist/workers/wdk-worker.js --status",
     "ui:install": "npm install --prefix ui",
@@ -130,6 +134,7 @@
     "service": "npm run build && node dist/dev.js dashboard"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@qvac/sdk": "^0.17.1",
     "@tetherto/wdk-cli": "1.0.0-beta.2",
     "@tetherto/wdk-wallet-evm-7702-gasless": "1.0.0-beta.4",

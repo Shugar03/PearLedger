@@ -1,0 +1,66 @@
+{
+  "version": "1.0.0",
+  "source": "docs/PLUGIN_CONTRACT.md",
+  "server": "pearledger-mcp",
+  "plugins": {
+    "plugin-invoice-ops": {
+      "owner": "Antony",
+      "tools": {
+        "parse_invoice": {
+          "required": ["filePath"],
+          "optional": [],
+          "returnsHint": ["invoice", "rawTextPreview"]
+        },
+        "match_purchase_order": {
+          "requiredAnyOf": [["invoiceId"], ["invoice"]],
+          "optional": ["invoiceId", "invoice"],
+          "returnsHint": ["matched", "purchaseOrderId", "confidence", "discrepancies"]
+        }
+      }
+    },
+    "plugin-procurement-forecast": {
+      "owner": "Antony",
+      "tools": {
+        "check_inventory": {
+          "required": [],
+          "optional": ["sku"],
+          "returnsHint": ["InventoryItem[]"]
+        },
+        "run_usage_forecast": {
+          "required": [],
+          "optional": ["sku"],
+          "returnsHint": ["ForecastResult[]"]
+        },
+        "draft_purchase_order": {
+          "required": [],
+          "optional": ["forecast", "sku", "days"],
+          "returnsHint": ["string"]
+        }
+      }
+    },
+    "plugin-wdk-settlement": {
+      "owner": "Antony",
+      "tools": {
+        "get_wallet_balance": {
+          "required": [],
+          "optional": ["network"],
+          "returnsHint": ["usdt", "native", "address", "network"]
+        },
+        "quote_payment": {
+          "required": ["to", "amount"],
+          "optional": ["network"],
+          "returnsHint": ["fee", "sponsored", "paymaster"]
+        },
+        "execute_gasless_payment": {
+          "required": ["to", "amount"],
+          "optional": ["dryRun", "confirmed", "network"],
+          "returnsHint": ["status", "txHash"],
+          "safety": {
+            "confirmAboveUsdt": 1000,
+            "preferDryRun": true
+          }
+        }
+      }
+    }
+  }
+}
